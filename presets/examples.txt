@@ -1,0 +1,15 @@
+# Example Presets (append after the .html)
+# Focus Timer
+timer.html?title=Deep%20Focus&work=50&break=10&rounds=3&auto=1
+timer.html?title=Sprints&work=20&break=5&rounds=6&long=15&every=3
+
+# Goal Progress
+progress.html?title=Reading%20100&value=37&goal=100&unit=pages&size=md
+progress.html?title=YouTube%20Subs&value=240&goal=1000&unit=subs&size=sm
+
+# Countdown
+countdown.html?title=Launch%20Day&date=2025-12-31%2009:00&mode=until
+countdown.html?title=4-Week%20Sprint&start=2025-08-19&date=2025-09-16&mode=auto
+
+# Habit Checklist
+habits.html?title=Morning%20Routine&habits=Water,Meditation,Deep%20Work,Walk,Reading&goal=3

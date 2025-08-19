@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Focus Timer</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --fg: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #82A31A;
+      --accent-weak: #3f6212;
+      --ring: rgba(130,163,26,.35);
+    }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: var(--bg);
+      color: var(--fg);
+      display: grid;
+      place-items: center;
+      min-height: 100dvh;
+    }
+    .wrap {
+      width: min(720px, 94vw);
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: 16px;
+      padding: 20px clamp(16px, 4vw, 28px);
+      box-shadow: 0 10px 30px rgba(0,0,0,.4);
+    }
+    header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    h1 { font-size: clamp(18px, 2.8vw, 22px); margin: 0; letter-spacing: .2px; font-weight: 600; }
+    .chips { display:flex; gap:8px; flex-wrap: wrap; }
+    .chip { font-size: 12px; padding: 6px 10px; border-radius: 999px; border:1px solid rgba(255,255,255,.08); color: var(--muted); }
+    .timer { display:grid; place-items:center; gap:16px; margin: 22px 0 10px; }
+    .time { font-variant-numeric: tabular-nums; font-size: clamp(42px, 12vw, 80px); font-weight: 700; }
+    .bar { width: 100%; height: 10px; background: rgba(255,255,255,.06); border-radius: 999px; overflow: hidden; position: relative; outline: 2px solid transparent; box-shadow: 0 0 0 4px var(--ring); }
+    .bar .fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), #b2ce35); transition: width .25s linear; }
+    .actions { display:flex; gap:10px; justify-content:center; flex-wrap: wrap; margin: 14px 0 6px; }
+    button {
+      appearance: none; border: 1px solid rgba(255,255,255,.08); color: var(--fg);
+      background: rgba(255,255,255,.02); padding: 10px 14px; border-radius: 12px;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: transform .05s ease, background .15s ease, box-shadow .15s ease;
+    }
+    button:hover { background: rgba(255,255,255,.06); }
+    button:active { transform: translateY(1px); }
+    .primary { background: var(--accent); border-color: var(--accent-weak); color: #0b0f19; box-shadow: 0 6px 20px rgba(130,163,26,.35); }
+    .ghost { color: var(--muted); }
+    .grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+    .field { background: rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.06); border-radius: 12px; padding: 10px 12px; }
+    .label { font-size: 11px; color: var(--muted); letter-spacing: .3px; text-transform: uppercase; }
+    .value { font-size: 14px; font-weight: 600; }
+    .footer { margin-top: 14px; text-align: center; color: var(--muted); font-size: 12px; }
+    html, body { height: 100%; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1 id="title">Focus Timer</h1>
+      <div class="chips">
+        <span class="chip" id="modeChip">Work</span>
+        <span class="chip" id="roundChip">Round 1/4</span>
+      </div>
+    </header>
+    <section class="timer">
+      <div class="time" id="time">25:00</div>
+      <div class="bar"><div class="fill" id="fill"></div></div>
+      <div class="actions">
+        <button id="start" class="primary">Start</button>
+        <button id="pause" class="ghost">Pause</button>
+        <button id="reset" class="ghost">Reset</button>
+        <button id="skip" class="ghost">Skip</button>
+      </div>
+    </section>
+    <div class="grid">
+      <div class="field"><div class="label">Work</div><div class="value" id="workVal">25 min</div></div>
+      <div class="field"><div class="label">Break</div><div class="value" id="breakVal">5 min</div></div>
+      <div class="field"><div class="label">Rounds</div><div class="value" id="roundsVal">4</div></div>
+    </div>
+    <div class="footer" id="footer"></div>
+  </div>
+  <script>
+    const qs=new URLSearchParams(location.search);
+    const clamp=(n,a,b)=>Math.min(Math.max(n,a),b);
+    const seconds=(m)=>Math.round(Number(m)*60);
+    function applyThemeFromParams(){const root=document.documentElement;const params=["bg","panel","fg","accent","ring"];params.forEach(p=>{if(qs.has(p)){const val=decodeURIComponent(qs.get(p));root.style.setProperty(`--${p}`,val);if(p==='accent')root.style.setProperty('--accent-weak',val);}});if(qs.has('title')){document.getElementById('title').textContent=decodeURIComponent(qs.get('title')).slice(0,60);}}
+    const settings={
+      work:clamp(parseFloat(qs.get('work')||25),1,180),
+      break:clamp(parseFloat(qs.get('break')||5),1,60),
+      rounds:clamp(parseInt(qs.get('rounds')||4),1,12),
+      long:clamp(parseFloat(qs.get('long')||15),1,60),
+      every:clamp(parseInt(qs.get('every')||4),1,12),
+      autoNext:(qs.get('auto')==='1'),
+      beep:(qs.get('beep')!=='0'),
+    };
+    const storageKey=`focus-timer::${location.search}`;
+    const state={mode:'work',round:1,remaining:seconds(settings.work),running:false,startedAt:null,totalForPhase:seconds(settings.work)};
+    try{const saved=JSON.parse(localStorage.getItem(storageKey)||'null');if(saved&&typeof saved==='object')Object.assign(state,saved);}catch{}
+    const els={modeChip:document.getElementById('modeChip'),roundChip:document.getElementById('roundChip'),time:document.getElementById('time'),fill:document.getElementById('fill'),start:document.getElementById('start'),pause:document.getElementById('pause'),reset:document.getElementById('reset'),skip:document.getElementById('skip'),workVal:document.getElementById('workVal'),breakVal:document.getElementById('breakVal'),roundsVal:document.getElementById('roundsVal'),footer:document.getElementById('footer'),title:document.getElementById('title')};
+    function fmt(s){const m=Math.floor(s/60),r=s%60;return `${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}`;}
+    function render(){els.modeChip.textContent=state.mode==='work'?'Work':(state.mode==='longbreak'?'Long Break':'Break');els.roundChip.textContent=`Round ${state.round}/${settings.rounds}`;els.time.textContent=fmt(state.remaining);const pct=100-Math.round(state.remaining/state.totalForPhase*100);els.fill.style.width=`${clamp(pct,0,100)}%`;els.workVal.textContent=`${settings.work} min`;els.breakVal.textContent=`${settings.break} min`;els.roundsVal.textContent=`${settings.rounds}`;els.start.textContent=state.running?'Running…':'Start';els.start.disabled=state.running;els.pause.disabled=!state.running;els.skip.disabled=!state.running;els.footer.textContent=qs.get('footer')?decodeURIComponent(qs.get('footer')):'';}
+    function save(){try{localStorage.setItem(storageKey,JSON.stringify(state));}catch{}}
+    function beep(){if(!settings.beep)return;try{const ctx=new(window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator();const g=ctx.createGain();o.type='sine';o.frequency.value=880;o.connect(g);g.connect(ctx.destination);g.gain.setValueAtTime(0.001,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.2,ctx.currentTime+0.02);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.3);o.start();o.stop(ctx.currentTime+0.32);}catch{}}
+    function nextPhase(){if(state.mode==='break'||state.mode==='longbreak'){state.round=Math.min(state.round+1,settings.rounds);}if(state.round>settings.rounds){state.running=false;beep();save();render();return;}if(state.mode==='work'){if(state.round%settings.every===0){state.mode='longbreak';state.totalForPhase=seconds(settings.long);}else{state.mode='break';state.totalForPhase=seconds(settings.break);} }else{state.mode='work';state.totalForPhase=seconds(settings.work);}state.remaining=state.totalForPhase;state.startedAt=Date.now();beep();save();render();if(settings.autoNext)start();}
+    let raf=null;function tick(){if(!state.running)return;const elapsed=Math.floor((Date.now()-state.startedAt)/1000);state.remaining=clamp(state.totalForPhase-elapsed,0,state.totalForPhase);render();if(state.remaining<=0){state.running=false;save();render();nextPhase();return;}raf=requestAnimationFrame(tick);}
+    function start(){if(state.running)return;state.running=true;state.startedAt=Date.now()-(state.totalForPhase-state.remaining)*1000;save();render();tick();}
+    function pause(){state.running=false;save();render();}
+    function reset(){state.running=false;state.mode='work';state.round=1;state.totalForPhase=seconds(settings.work);state.remaining=state.totalForPhase;state.startedAt=null;save();render();}
+    function skip(){if(state.running){state.remaining=0;}}
+    els.start.addEventListener('click',start);
+    els.pause.addEventListener('click',pause);
+    els.reset.addEventListener('click',reset);
+    els.skip.addEventListener('click',skip);
+    applyThemeFromParams();render();
+  </script>
+</body>
+</html>

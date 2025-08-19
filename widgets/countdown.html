@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Countdown</title>
+  <style>
+    :root{
+      --bg:#0f172a; --panel:#111827; --fg:#e5e7eb; --muted:#9ca3af;
+      --accent:#82A31A; --accent-2:#b2ce35; --ring:rgba(130,163,26,.35);
+      --radius:16px; --gap:10px; --size:clamp(24px,8vw,44px);
+    }
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--fg);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;display:grid;place-items:center}
+    .wrap{width:min(760px,94vw);background:var(--panel);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius);padding:20px clamp(16px,4vw,28px);box-shadow:0 10px 30px rgba(0,0,0,.4)}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
+    .title{font-weight:600;font-size:clamp(16px,2.6vw,20px);margin:0}
+    .sub{font-size:12px;color:var(--muted)}
+    .grid{display:grid;grid-auto-flow:column;gap:var(--gap);justify-content:center;align-items:end;margin-top:8px}
+    .slot{display:grid;justify-items:center}
+    .num{font-variant-numeric:tabular-nums;line-height:1;font-weight:800;font-size:var(--size)}
+    .lab{font-size:12px;color:var(--muted)}
+    .bar{position:relative;width:100%;height:10px;background:rgba(255,255,255,.06);border-radius:999px;overflow:hidden;box-shadow:0 0 0 4px var(--ring);margin-top:12px}
+    .fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .35s ease}
+    .footer{margin-top:10px;text-align:center;color:var(--muted);font-size:12px}
+    .done{color:var(--fg);text-align:center;margin-top:6px;font-weight:700}
+    .compact{--gap:6px; --size:clamp(18px,6.5vw,34px)}
+  </style>
+</head>
+<body>
+  <div class="wrap" id="card">
+    <header>
+      <h1 class="title" id="title">Countdown</h1>
+      <div class="sub" id="subtitle"></div>
+    </header>
+    <div class="grid" id="grid">
+      <div class="slot"><div class="num" id="d">0</div><div class="lab" id="ld">days</div></div>
+      <div class="slot"><div class="num" id="h">0</div><div class="lab" id="lh">hours</div></div>
+      <div class="slot"><div class="num" id="m">0</div><div class="lab" id="lm">minutes</div></div>
+      <div class="slot"><div class="num" id="s">0</div><div class="lab" id="ls">seconds</div></div>
+    </div>
+    <div class="bar" id="bar"><div class="fill" id="fill"></div></div>
+    <div class="done" id="done" style="display:none"></div>
+    <div class="footer" id="footer"></div>
+  </div>
+  <script>
+    const qs = new URLSearchParams(location.search);
+    const clamp = (n,a,b)=>Math.min(Math.max(+n,a),b);
+    (function theme(){
+      const root = document.documentElement;
+      for (const key of ["bg","panel","fg","muted","accent","accent2","ring","radius"]) {
+        if (qs.has(key)) {
+          const v = decodeURIComponent(qs.get(key));
+          if (key === 'accent2') root.style.setProperty('--accent-2', v); else root.style.setProperty(`--${key}`.replace('accent2','accent-2'), v);
+        }
+      }
+      if ((qs.get('size')||'').toLowerCase()==='compact') document.getElementById('card').classList.add('compact');
+    })();
+    const title = document.getElementById('title');
+    const subtitle = document.getElementById('subtitle');
+    const footer = document.getElementById('footer');
+    const fill = document.getElementById('fill');
+    const bar = document.getElementById('bar');
+    const done = document.getElementById('done');
+    title.textContent = decodeURIComponent(qs.get('title')||'Countdown').slice(0,60);
+    subtitle.textContent = decodeURIComponent(qs.get('subtitle')||'');
+    footer.textContent = decodeURIComponent(qs.get('footer')||'');
+    if (!subtitle.textContent) subtitle.style.display='none';
+    if (!footer.textContent) footer.style.display='none';
+    function parseDate(s){
+      if (!s) return null;
+      const clean = decodeURIComponent(s).replace(/_/g,' ');
+      if (/^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?)?$/.test(clean)) {
+        const parts = clean.split(/[ T]/);
+        if (parts.length===1) return new Date(parts[0] + 'T00:00:00');
+        return new Date(parts[0] + 'T' + parts[1]);
+      }
+      const d = new Date(clean);
+      return isNaN(d) ? null : d;
+    }
+    const tDate = parseDate(qs.get('date') || qs.get('target'));
+    const sDate = parseDate(qs.get('start'));
+    const mode = (qs.get('mode')||'until').toLowerCase(); // until | since | auto
+    if (!tDate) {
+      document.getElementById('grid').style.display='none';
+      bar.style.display='none';
+      done.style.display='block';
+      done.textContent = '⛔ Missing or invalid "date" parameter';
+    } else {
+      let windowStart = sDate || new Date();
+      let windowEnd = tDate;
+      function update(){
+        const now = new Date();
+        const before = now <= tDate;
+        const showUntil = mode==='until' || (mode==='auto' && before);
+        let diff = Math.abs(tDate - now);
+        let secs = Math.floor(diff/1000);
+        const d = Math.floor(secs/86400); secs -= d*86400;
+        const h = Math.floor(secs/3600); secs -= h*3600;
+        const m = Math.floor(secs/60); secs -= m*60;
+        const s = secs;
+        document.getElementById('d').textContent = String(d);
+        document.getElementById('h').textContent = String(h).padStart(2,'0');
+        document.getElementById('m').textContent = String(m).padStart(2,'0');
+        document.getElementById('s').textContent = String(s).padStart(2,'0');
+        if (mode==='until' && !before) {
+          done.style.display='block';
+          done.textContent = decodeURIComponent(qs.get('done')||"It's time!");
+        } else if (mode==='since' && before) {
+          done.style.display='block';
+          done.textContent = decodeURIComponent(qs.get('wait')||'Not started yet');
+        } else {
+          done.style.display='none';
+        }
+        if (sDate) {
+          const total = Math.max(1, windowEnd - windowStart);
+          const elapsed = clamp(((now - windowStart)/total)*100, 0, 100);
+          fill.style.width = (showUntil? elapsed : 100) + '%';
+          bar.setAttribute('aria-valuenow', Math.round(elapsed));
+        } else {
+          const horizon = Math.max(1, Math.abs(tDate - (showUntil? now : windowStart)) );
+          const remain = Math.max(0, Math.abs(tDate - now));
+          const pct = clamp(100 - (remain/horizon)*100, 0, 100);
+          fill.style.width = pct + '%';
+        }
+      }
+      update();
+      setInterval(update, 1000);
+    }
+    const ld = qs.get('ld'); if (ld) document.getElementById('ld').textContent = decodeURIComponent(ld);
+    const lh = qs.get('lh'); if (lh) document.getElementById('lh').textContent = decodeURIComponent(lh);
+    const lm = qs.get('lm'); if (lm) document.getElementById('lm').textContent = decodeURIComponent(lm);
+    const ls = qs.get('ls'); if (ls) document.getElementById('ls').textContent = decodeURIComponent(ls);
+  </script>
+</body>
+</html>

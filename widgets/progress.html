@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Goal Progress</title>
+  <style>
+    :root{
+      --bg:#0f172a; --panel:#111827; --fg:#e5e7eb; --muted:#9ca3af;
+      --accent:#82A31A; --accent-2:#b2ce35; --ring:rgba(130,163,26,.35);
+      --radius:16px; --height:16px;
+    }
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--fg);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;display:grid;place-items:center;}
+    .wrap{width:min(720px,94vw);background:var(--panel);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius);padding:18px clamp(16px,4vw,28px);box-shadow:0 10px 30px rgba(0,0,0,.4)}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+    .title{font-weight:600;font-size:clamp(16px,2.6vw,20px);margin:0}
+    .sub{font-size:12px;color:var(--muted)}
+    .bar{position:relative;width:100%;height:var(--height);background:rgba(255,255,255,.06);border-radius:999px;overflow:hidden;box-shadow:0 0 0 4px var(--ring)}
+    .fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .35s ease}
+    .meta{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+    .left{display:flex;gap:8px;align-items:center}
+    .pill{font-size:11px;padding:4px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.08);color:var(--muted)}
+    .pct{font-variant-numeric:tabular-nums;font-weight:700}
+    .note{margin-top:10px;text-align:center;color:var(--muted);font-size:12px}
+    .hide{display:none}
+    .size-sm{--height:10px}
+    .size-md{--height:16px}
+    .size-lg{--height:22px}
+  </style>
+</head>
+<body>
+  <div class="wrap" id="card">
+    <header>
+      <h1 class="title" id="title">Goal Progress</h1>
+      <div class="sub" id="subtitle"></div>
+    </header>
+    <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Progress">
+      <div class="fill" id="fill"></div>
+    </div>
+    <div class="meta">
+      <div class="left">
+        <span class="pill" id="leftLabel"></span>
+        <span class="pill" id="rightLabel"></span>
+      </div>
+      <div class="pct" id="pct">0%</div>
+    </div>
+    <div class="note" id="footer"></div>
+  </div>
+  <script>
+    const qs = new URLSearchParams(location.search);
+    const clamp = (n,a,b)=>Math.min(Math.max(+n,a),b);
+    (function theme(){
+      const root = document.documentElement;
+      for (const key of ["bg","panel","fg","muted","accent","accent2","ring"]) {
+        if (qs.has(key)) {
+          const v = decodeURIComponent(qs.get(key));
+          if (key === 'accent2') root.style.setProperty('--accent-2', v);
+          else root.style.setProperty(`--${key}`.replace('accent2','accent-2'), v);
+        }
+      }
+      const radius = qs.get('radius'); if (radius) document.documentElement.style.setProperty('--radius', radius);
+      const size = (qs.get('size')||'md').toLowerCase();
+      const card = document.getElementById('card');
+      card.classList.add(size==='sm'?'size-sm':size==='lg'?'size-lg':'size-md');
+    })();
+    const title = document.getElementById('title');
+    const subtitle = document.getElementById('subtitle');
+    const leftLabel = document.getElementById('leftLabel');
+    const rightLabel = document.getElementById('rightLabel');
+    const pctEl = document.getElementById('pct');
+    const fill = document.getElementById('fill');
+    const footer = document.getElementById('footer');
+    const bar = document.querySelector('.bar');
+    title.textContent = decodeURIComponent(qs.get('title')||'Goal Progress').slice(0,60);
+    subtitle.textContent = decodeURIComponent(qs.get('subtitle')||'');
+    footer.textContent = decodeURIComponent(qs.get('footer')||'');
+    if (!subtitle.textContent) subtitle.classList.add('hide');
+    if (!footer.textContent) footer.classList.add('hide');
+    let percent = 0;
+    if (qs.has('progress')) {
+      percent = clamp(qs.get('progress'), 0, 100);
+    } else if (qs.has('value') && qs.has('goal')) {
+      const value = Math.max(0, parseFloat(qs.get('value')) || 0);
+      const goal  = Math.max(0.0001, parseFloat(qs.get('goal')) || 0);
+      percent = clamp((value/goal)*100, 0, 9999);
+      const unit = decodeURIComponent(qs.get('unit')||'');
+      leftLabel.textContent = `${value}${unit ? ' '+unit : ''}`;
+      rightLabel.textContent = `${goal}${unit ? ' '+unit : ''}`;
+    }
+    if (!leftLabel.textContent && qs.has('left')) leftLabel.textContent = decodeURIComponent(qs.get('left'));
+    if (!rightLabel.textContent && qs.has('right')) rightLabel.textContent = decodeURIComponent(qs.get('right'));
+    if (qs.get('showlabels') === '0') { leftLabel.classList.add('hide'); rightLabel.classList.add('hide'); }
+    if (qs.get('showpct') === '0') pctEl.classList.add('hide');
+    const animate = qs.get('animate') !== '0';
+    function render(p){
+      const capped = Math.min(p, 100);
+      fill.style.transition = animate ? 'width .35s ease' : 'none';
+      fill.style.width = capped + '%';
+      bar.setAttribute('aria-valuenow', Math.round(capped));
+      const display = (qs.get('format')||'%').toLowerCase();
+      pctEl.textContent = display === '%' ? Math.round(p) + '%' : (p).toFixed(1);
+    }
+    render(percent);
+    if (qs.has('auto')) {
+      const target = clamp(qs.get('auto'), 0, 100);
+      let cur = 0; render(cur);
+      const step = Math.max(1, Math.round((target-cur)/30));
+      const id = setInterval(()=>{ cur += step; if (cur >= target) { cur = target; clearInterval(id); } render(cur); }, 60);
+    }
+  </script>
+</body>
+</html>
