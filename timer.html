@@ -35,7 +35,7 @@
             background-color: rgba(var(--panel-color-rgb, 247, 247, 247), 0.7);
             backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
             z-index: 10;
-            padding: 56px 24px 24px 24px; /* Increased top padding */
+            padding: 56px 24px 24px 24px;
             box-sizing: border-box;
             display: flex; flex-direction: column; gap: 20px;
             opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
@@ -191,15 +191,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const radius = elements.progressBar.r.baseVal.value, circumference = 2 * Math.PI * radius;
     elements.progressBar.style.strokeDasharray = circumference;
 
+    // --- AMÉLIORATION : Fonction centralisée pour la couleur du thème ---
+    const updateThemeColor = (color) => {
+        root.style.setProperty('--accent-color', color);
+        elements.progressBar.style.stroke = color;
+        elements.startPauseBtn.style.backgroundColor = color;
+        elements.startPauseBtn.style.boxShadow = `0 2px 8px -2px ${color}`;
+    };
+
     const applyConfigToTimer = (fullReset = true) => {
         clearInterval(state.timerId);
         state.isRunning = false; state.isPaused = false; state.currentMode = 'work';
         if (fullReset) { state.currentRound = 1; state.workSessionsCompleted = 0; elements.title.textContent = config.title; }
         state.timeLeft = config.work * 60;
         const workColor = getComputedStyle(root).getPropertyValue('--work-color');
-        root.style.setProperty('--accent-color', workColor);
-        elements.progressBar.style.stroke = workColor; elements.startPauseBtn.style.backgroundColor = workColor;
-        elements.startPauseBtn.style.boxShadow = `0 2px 8px -2px ${workColor}`;
+        updateThemeColor(workColor); // Utilisation de la nouvelle fonction
         updateDisplay(); updateUI(); updateRoundsIndicator();
     };
     
@@ -225,9 +231,22 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.settings.valueSpans.break.textContent = config.break;
         elements.settings.valueSpans.totalRounds.textContent = config.totalRounds;
     };
+
+    // --- AMÉLIORATION : Sauvegarde des réglages ---
+    const saveCustomConfig = () => {
+        const customConfig = { work: config.work, break: config.break, totalRounds: config.totalRounds };
+        localStorage.setItem('timerCustomConfig', JSON.stringify(customConfig));
+        localStorage.removeItem('timerLastPreset');
+    };
+    const savePresetChoice = (presetKey) => {
+        localStorage.setItem('timerLastPreset', presetKey);
+        localStorage.removeItem('timerCustomConfig');
+    };
+
     const applyPreset = (presetKey) => {
         activePreset = presetKey;
         config = { ...config, ...presets[presetKey] };
+        savePresetChoice(presetKey); // Sauvegarde du choix
         Object.values(elements.settings.valueSpans).forEach(span => {
             span.classList.add('anim-pop');
             span.addEventListener('animationend', () => span.classList.remove('anim-pop'), { once: true });
@@ -242,9 +261,33 @@ document.addEventListener('DOMContentLoaded', () => {
         activePreset = null;
         updateSettingsUI();
         updatePresetHighlighting();
+        saveCustomConfig(); // Sauvegarde des réglages perso
         if (!state.isRunning) applyConfigToTimer(true);
     };
-    const parseUrlParams = () => {
+
+    // --- AMÉLIORATION : Logique de chargement combinée ---
+    const loadAndParseSettings = () => {
+        // 1. Réglages par défaut
+        activePreset = 'classic';
+        config = { ...presets.classic };
+
+        // 2. Charger depuis localStorage (priorité basse)
+        const savedCustomConfig = localStorage.getItem('timerCustomConfig');
+        const savedPreset = localStorage.getItem('timerLastPreset');
+        if (savedCustomConfig) {
+            try {
+                const custom = JSON.parse(savedCustomConfig);
+                config.work = parseInt(custom.work, 10) || config.work;
+                config.break = parseInt(custom.break, 10) || config.break;
+                config.totalRounds = parseInt(custom.totalRounds, 10) || config.totalRounds;
+                activePreset = null;
+            } catch (e) { console.error("Failed to parse custom config."); }
+        } else if (savedPreset && presets[savedPreset]) {
+            activePreset = savedPreset;
+            config = { ...config, ...presets[savedPreset] };
+        }
+
+        // 3. Parser les paramètres d'URL (priorité haute)
         if (params.has('work') || params.has('break') || params.has('rounds')) {
             activePreset = null;
             config.work = getClampedInt('work', config.work, 1, 120);
@@ -255,6 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
         config.roundsBeforeLongBreak = getClampedInt('every', config.totalRounds, 1, 12);
         config.title = params.get('title')?.trim() || 'Focus Session';
     };
+
     const updateDisplay = () => {
         const timeLeft = state.timeLeft ?? config.work * 60;
         elements.timerText.textContent = `${String(Math.floor(timeLeft/60)).padStart(2,'0')}:${String(timeLeft%60).padStart(2,'0')}`;
@@ -282,10 +326,8 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'break': totalTime = config.break * 60; newTitle = 'Short Break'; accent = rootStyles.getPropertyValue('--short-break-color'); break;
             case 'longBreak': totalTime = config.longBreak * 60; newTitle = 'Long Break'; accent = rootStyles.getPropertyValue('--long-break-color'); break;
         }
-        root.style.setProperty('--accent-color', accent);
+        updateThemeColor(accent); // Utilisation de la nouvelle fonction
         elements.title.textContent = newTitle;
-        elements.progressBar.style.stroke = accent; elements.startPauseBtn.style.backgroundColor = accent;
-        elements.startPauseBtn.style.boxShadow = `0 2px 8px -2px ${accent}`;
         state.timeLeft = totalTime;
         updateDisplay(); updateUI(); 
         startTimer();
@@ -296,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const isLongBreakTime = state.workSessionsCompleted > 0 && state.workSessionsCompleted % config.roundsBeforeLongBreak === 0;
             switchMode(isLongBreakTime ? 'longBreak' : 'break');
         } else {
-            if (state.currentRound < config.totalRounds) { state.currentRound++; switchMode('work'); }
+            if (state.workSessionsCompleted < config.totalRounds) { switchMode('work'); }
             else { applyConfigToTimer(true); elements.roundsIndicator.innerHTML = "Session Complete"; }
         }
     };
@@ -305,9 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (state.isRunning) return;
         state.isRunning = true; state.isPaused = false;
         if (elements.roundsIndicator.innerHTML.includes("Complete")) {
-            applyConfigToTimer(true);
-            switchMode('work');
-            return;
+             applyConfigToTimer(true);
         }
         state.timerId = setInterval(tick, 1000);
         updateUI();
@@ -335,13 +375,19 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSetting(e.currentTarget.dataset.setting, parseInt(e.currentTarget.dataset.change, 10));
     }));
     elements.settings.presetBtns.forEach(btn => btn.addEventListener('click', (e) => applyPreset(e.currentTarget.dataset.preset)));
+    
     elements.settings.darkModeCheckbox.addEventListener('change', (e) => {
         elements.container.classList.toggle('dark-theme', e.target.checked);
+        localStorage.setItem('timerDarkMode', e.target.checked); // Sauvegarde du thème
     });
+
     elements.settings.resetDefaultsBtn.addEventListener('click', () => {
+        localStorage.removeItem('timerCustomConfig');
         applyPreset('classic');
-        elements.settings.darkModeCheckbox.checked = true;
-        elements.settings.darkModeCheckbox.dispatchEvent(new Event('change'));
+        if (!elements.settings.darkModeCheckbox.checked) {
+             elements.settings.darkModeCheckbox.checked = true;
+             elements.settings.darkModeCheckbox.dispatchEvent(new Event('change'));
+        }
     });
     elements.settings.muteToggle.addEventListener('click', () => {
         state.isMuted = !state.isMuted;
@@ -350,17 +396,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     elements.startPauseBtn.addEventListener('click', () => {
         audio.init();
-        elements.settings.panel.classList.remove('visible');
-        if (state.isPaused) { startTimer(); } 
-        else { state.isRunning ? pauseTimer() : switchMode('work'); }
+        if (state.isPaused || !state.isRunning) {
+            startTimer();
+        } else {
+            pauseTimer();
+        }
     });
     elements.resetBtn.addEventListener('click', () => applyConfigToTimer(true));
     elements.skipBtn.addEventListener('click', () => triggerNextPhase());
     
     // --- Initial Setup ---
+    const savedDarkMode = localStorage.getItem('timerDarkMode') === 'true';
+    elements.settings.darkModeCheckbox.checked = savedDarkMode;
+    elements.container.classList.toggle('dark-theme', savedDarkMode);
+    
     state.isMuted = localStorage.getItem('timerMuted') === 'true';
     updateMuteButtonUI();
-    parseUrlParams();
+    
+    loadAndParseSettings();
     updateSettingsUI();
     updatePresetHighlighting();
     applyConfigToTimer(true);
