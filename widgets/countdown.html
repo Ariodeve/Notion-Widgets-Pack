@@ -1,534 +1,798 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Countdown</title>
-    <style>
-        :root {
-            --panel-color: #f7f7f7; --fg-color: #1f1f1f; --fg-light-color: #8a8a8e;
-            --ring-color: #e5e5e5; --border-color: rgba(0,0,0,0.08);
-            --accent-color: #5e5ce6;
-        }
-        .dark-theme {
-            --panel-color: #1c1c1e; --bg-color: #2c2c2e; --fg-color: #ffffff;
-            --fg-light-color: #8d8d92; --ring-color: #3a3a3c; --border-color: rgba(255,255,255,0.1);
-        }
-
-        body { margin: 0; padding: 0; background-color: #f7f7f7; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        body.compact .widget-container { padding: 16px; }
-
-        .widget-container {
-            position: relative; width: 100%; max-width: 380px; background-color: var(--panel-color);
-            border-radius: 16px; padding: 24px; text-align: center; box-sizing: border-box;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08); overflow: hidden;
-            transition: background-color 0.3s ease, color 0.3s ease, min-height 0.4s cubic-bezier(0.2, 0.9, 0.3, 1);
-            color: var(--fg-color);
-        }
-        .widget-container.settings-active { min-height: 480px; }
-        
-        .settings-toggle { position: absolute; top: 16px; right: 16px; z-index: 20; background: none; border: none; cursor: pointer; padding: 4px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-        .settings-toggle:hover { background-color: var(--ring-color); }
-        .settings-toggle svg { width: 20px; height: 20px; fill: var(--fg-light-color); }
-        
-        .settings-panel {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(var(--panel-color-rgb, 247, 247, 247), 0.7);
-            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-            z-index: 10; padding: 24px; box-sizing: border-box;
-            display: grid; grid-template-rows: auto 1fr auto; gap: 16px;
-            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
-        }
-        .dark-theme .settings-panel { --panel-color-rgb: 28, 28, 30; }
-        .settings-panel.visible { opacity: 1; pointer-events: auto; }
-
-        .settings-panel-header { display: flex; justify-content: space-between; align-items: center; }
-        .settings-panel-header h2 { font-size: 1rem; font-weight: 600; margin: 0; }
-        
-        .settings-content { display: flex; flex-direction: column; gap: 24px; overflow-y: auto; padding: 4px 0; }
-        .settings-section { display: flex; flex-direction: column; gap: 12px; }
-        .settings-header { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg-light-color); text-align: left; margin: 0; }
-        .setting-row { display: flex; justify-content: space-between; align-items: center; }
-        .setting-row label { font-size: 0.875rem; }
-        
-        .preset-tabs { 
-            position: relative; 
-            display: flex; 
-            justify-content: space-around; 
-            border-bottom: 1px solid var(--border-color);
-            overflow: hidden; 
-        }
-        .btn-preset { 
-            background: none; 
-            color: var(--fg-light-color); 
-            border: none; 
-            padding: 10px 0; 
-            font-size: 0.875rem; 
-            font-weight: 500; 
-            cursor: pointer; 
-            transition: color 0.3s ease; 
-            flex-grow: 1; 
-            white-space: nowrap;
-            min-width: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .btn-preset.active { color: var(--accent-color); font-weight: 600; }
-        .btn-preset:disabled { color: var(--fg-light-color) !important; cursor: default; }
-        .preset-indicator { 
-            position: absolute; 
-            bottom: -1px; 
-            left: 0; 
-            height: 2px; 
-            background-color: var(--accent-color); 
-            border-radius: 1px; 
-            transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1), width 0.4s cubic-bezier(0.2, 0.9, 0.3, 1);
-        }
-
-        .custom-controls input { background-color: var(--ring-color); border: 1px solid var(--border-color); color: var(--fg-color); border-radius: 6px; padding: 4px 8px; font-family: inherit; font-size: 0.875rem; width: 60%; }
-        
-        .setting-row.two-inputs {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 8px 12px;
-    align-items: center;
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Countdown</title>
+<!--
+  Widget Countdown – Params supportés (URL)
+  - title=Texte
+  - date=YYYY-MM-DDTHH:mm (Z ou +02:00) | tz=Europe/Paris ou +02:00
+  - duration / minutes=Nombre (1–720)
+  - units=combinaison d,h,m,s (ex: hm, dms)
+  - theme=light|dark|violet|blue|green|pink|gold
+  - accent=HEX sans # (si pas de preset)
+  - footer=Texte
+  - finish=Texte à l’échéance
+  - lock=1 (masquer paramètres)
+  - compact=1 (padding réduit)
+-->
+<style>
+/* =================== Theme tokens =================== */
+:root{
+  --bg-color:#ffffff;
+  --panel-color:#ffffff;
+  --fg-color:#1f1f1f;
+  --fg-light-color:#8a8a8e;
+  --ring-color:#e5e5e5;
+  --border-color:rgba(0,0,0,0.08);
+  --accent-color:#5e5ce6; /* remplacé par var(--fg-color) en mode "default" */
+  --reset-accent:#82A31A; /* vert French Pépite */
 }
-.setting-row.two-inputs label {
-    font-size: 0.875rem;
-    text-align: right;
-    color: var(--fg-light-color);
-}
-.setting-row.two-inputs input {
-    width: 100%;
-    padding: 6px 8px;
-    font-size: 0.875rem;
-}
-@media (max-width: 360px) {
-    .setting-row.two-inputs { grid-template-columns: 1fr; }
-    .setting-row.two-inputs label { text-align: left; }
+.dark-theme{
+  --bg-color:#1c1c1e;
+  --panel-color:#2c2c2e;
+  --fg-color:#ffffff;
+  --fg-light-color:#8d8d92;
+  --ring-color:#3a3a3c;
+  --border-color:rgba(255,255,255,0.1);
 }
 
-/* Tighten datetime parts (WebKit) */
-.input-compact::-webkit-datetime-edit { padding: 0 2px; }
-.input-compact::-webkit-datetime-edit-fields-wrapper { display: inline-flex; gap: 2px; }
-.input-compact::-webkit-calendar-picker-indicator { opacity: .7; }
+/* =================== Layout =================== */
+body{
+  margin:0; padding:0; background:#ffffff;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
+  transition:background-color .3s ease;
+}
+body.compact .widget-container{ padding:16px; }
 
-/* Prevent horizontal overflow + mobile stack */
-.setting-row.two-inputs > * { min-width: 0; }
-@media (max-width: 360px) {
-  .setting-row.two-inputs { grid-template-columns: 1fr; row-gap: 6px; }
-  .setting-row.two-inputs label { text-align: left; }
+.widget-container{
+  position:relative; width:100%; max-width:380px; color:var(--fg-color);
+  background:var(--panel-color); border-radius:16px; padding:24px; box-sizing:border-box;
+  box-shadow:0 8px 32px rgba(0,0,0,.08); overflow:hidden;
+  transition:background-color .3s ease,color .3s ease,min-height .4s cubic-bezier(.2,.9,.3,1);
 }
+.widget-container.settings-active{ min-height:520px; }
 
-        .custom-controls.disabled { opacity: 0.5; pointer-events: none; }
-        
-        /* Badge-style unit selector */
-        .horizontal-toggles { display: flex; justify-content: space-around; align-items: center; gap: 14px; margin-top: 10px; }
-        .unit-toggle { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
-        .unit-toggle input { position: absolute; opacity: 0; pointer-events: none; }
-        .unit-dot { width: 18px; height: 18px; border-radius: 999px; border: 2px solid var(--fg-light-color); background: transparent; transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease; }
-        .unit-toggle input:checked + .unit-dot { background: var(--accent-color); border-color: var(--accent-color); box-shadow: 0 0 0 3px rgba(0,0,0,0); }
-        .unit-toggle-label { font-size: 0.75rem; font-weight: 600; color: var(--fg-light-color); letter-spacing: .02em; }
-        .unit-toggle:focus-within .unit-dot { box-shadow: 0 0 0 3px rgba(130,163,26,.25); }
-        
-        .switch-container { position: relative; width: 44px; height: 24px; }
-        .switch-container input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; inset: 0; background-color: var(--ring-color); transition: 0.3s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 2px; bottom: 2px; background-color: white; transition: 0.3s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--accent-color); }
-        input:checked + .slider:before { transform: translateX(20px); }
-        
-        .settings-footer { display: flex; justify-content: flex-end; align-items: center; }
-        .dark-mode-toggle { display: flex; align-items: center; }
-        .dark-mode-toggle svg { width: 14px; height: 14px; fill: var(--fg-light-color); transition: opacity 0.3s ease; }
-        .sun-icon { margin-right: 8px; }
-        .moon-icon { margin-left: 8px; }
-        .dark-theme .dark-mode-toggle .sun-icon { opacity: 1; }
-        .dark-theme .dark-mode-toggle .moon-icon { opacity: 0; }
-        .dark-mode-toggle .sun-icon { opacity: 0; }
-        .dark-mode-toggle:not(.dark-theme) .moon-icon { opacity: 1; }
+/* Settings toggle */
+.settings-toggle{
+  position:absolute; top:16px; right:16px; z-index:20; background:none; border:none; cursor:pointer;
+  padding:6px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  transition:transform .15s ease, background-color .2s ease;
+}
+.settings-toggle:hover{ background:rgba(0,0,0,.06); transform:scale(1.06); }
+.dark-theme .settings-toggle:hover{ background:rgba(255,255,255,.08); }
+.settings-toggle svg{ width:20px; height:20px; fill:var(--fg-light-color); }
 
-        .subtitle { font-size: 0.875rem; font-weight: 500; opacity: 0.6; margin: 0 0 4px 0; letter-spacing: 0.08em; }
-        .title { font-size: 1.125rem; font-weight: 600; margin: 0 0 20px 0; }
-        .timer-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
-        .timer-unit { display: flex; flex-direction: column; }
-        .timer-unit .number { font-size: 2.25rem; font-weight: 700; line-height: 1.1; color: var(--accent-color); font-variant-numeric: tabular-nums; }
-        .timer-unit .label { font-size: 0.75rem; font-weight: 500; opacity: 0.5; text-transform: uppercase; letter-spacing: 0.08em; }
-        .finished-message { display: none; font-size: 1.125rem; font-weight: 600; padding: 32px 0; }
-        .progress-container { display: none; width: 100%; height: 8px; background-color: var(--ring-color); border-radius: 4px; overflow: hidden; margin-bottom: 12px; }
-        .progress-bar { width: 0%; height: 100%; background-color: var(--accent-color); border-radius: 4px; transition: width 0.5s ease; }
-        .footer { font-size: 0.75rem; font-weight: 500; opacity: 0.5; margin: 0; }
-        .custom-controls {
-    transition: max-height 0.4s ease, opacity 0.4s ease, margin-top 0.4s ease;
-    max-height: 0;
-    opacity: 0;
-    overflow: hidden;
-    margin-top: 0 !important;
+/* Settings panel (glass) */
+.settings-panel{
+  position:absolute; inset:0; z-index:10; padding:20px;
+  display:grid; grid-template-rows:auto 1fr auto; gap:16px; border-radius:16px;
+  background-color:rgba(var(--panel-color-rgb,255,255,255),.7);
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  box-shadow:0 6px 24px rgba(0,0,0,.10),0 2px 8px rgba(0,0,0,.06);
+  opacity:0; pointer-events:none; transition:opacity .3s ease;
 }
-.custom-controls.visible {
-    max-height: 150px;
-    opacity: 1;
-    margin-top: 16px !important;
-}
-.setting-row.two-inputs {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 8px 12px;
-    align-items: center;
-}
-.setting-row.two-inputs label {
-    font-size: 0.875rem;
-    text-align: right;
-    color: var(--fg-light-color);
-}
-.setting-row.two-inputs input {
-    width: 18px;
-    padding: 6px 8px;
-    font-size: 0.875rem;
-}
-.finished-message {
-    font-size: 1.125rem;
-    font-weight: 600;
-    padding: 32px 0;
-    line-height: 1.4;
-    opacity: 0.8;
+.dark-theme .settings-panel{ --panel-color-rgb:44,44,46; }
+.settings-panel.visible{ opacity:1; pointer-events:auto; }
+.settings-panel::after{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(to bottom, rgba(0,0,0,.04), transparent 30%);
 }
 
-    </style>
+/* Reduced motion */
+@media (prefers-reduced-motion:reduce){ *{ transition:none !important; animation:none !important; } }
+@supports not ((backdrop-filter: blur(10px)) or (-webkit-backdrop-filter: blur(10px))){
+  .settings-panel{ backdrop-filter:none; -webkit-backdrop-filter:none; background-color: color-mix(in srgb, var(--panel-color) 92%, transparent); }
+}
+
+/* Panel header */
+.settings-panel-header{ display:flex; align-items:center; justify-content:space-between; }
+.settings-panel-header h2{ margin:0; font-size:.95rem; font-weight:700; letter-spacing:.02em; }
+
+/* Panel body */
+.settings-content{
+  display:flex; flex-direction:column; gap:16px; overflow-y:auto; padding:4px 2px;
+  scrollbar-width:none; -ms-overflow-style:none;
+}
+.settings-content::-webkit-scrollbar{ width:0; height:0; display:none; }
+
+.settings-section{ display:flex; flex-direction:column; gap:10px; }
+.settings-header{
+  margin:0; font-size:.7rem; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--fg-light-color);
+}
+
+.input-row{ display:flex; flex-direction:column; gap:6px; text-align:left; }
+.input-row label{ font-size:.8rem; color:var(--fg-light-color); }
+.input-row input{
+  height:36px; border-radius:10px; background:#f5f6f7; border:1px solid var(--border-color);
+  color:var(--fg-color); padding:6px 10px; font-size:.875rem; font-family:inherit; box-sizing:border-box;
+}
+.input-row small.help-text{ font-size:.72rem; color:var(--fg-light-color); }
+.dark-theme .input-row input{ background:#2a2b2e; }
+.dark-theme .input-row input::-webkit-calendar-picker-indicator{ filter:invert(1); }
+
+.horizontal-toggles{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+.btn-chip{
+  border:1px solid var(--border-color); background:transparent; padding:6px 10px; border-radius:999px;
+  font-size:.8rem; cursor:pointer; transition:transform .15s ease, background-color .2s ease; color:var(--fg-color);
+}
+.btn-chip:hover{ background:var(--ring-color); transform:translateY(-1px); }
+.dark-theme .btn-chip:hover{ background:rgba(255,255,255,0.12); }
+
+/* Unit pills */
+.unit-toggle{ display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+.unit-toggle input{ position:absolute; opacity:0; pointer-events:none; }
+.unit-dot{
+  position:relative; width:18px; height:18px; border-radius:999px;
+  background:transparent; border:2px solid var(--border-color);
+  transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease, transform .12s ease;
+}
+.dark-theme .unit-dot{ border-color:rgba(255,255,255,0.35); }
+.unit-toggle:hover .unit-dot{ transform:translateY(-1px); box-shadow:0 0 0 3px rgba(0,0,0,0.06); }
+.dark-theme .unit-toggle:hover .unit-dot{ box-shadow:0 0 0 3px rgba(255,255,255,0.10); }
+@keyframes wiggle{0%{transform:translateX(0)}25%{transform:translateX(-2px)}75%{transform:translateX(2px)}100%{transform:translateX(0)}}
+.invalid-flash{animation:wiggle .22s ease;}
+.unit-toggle input:checked + .unit-dot{
+  background: var(--fg-color);
+  border-color: var(--fg-color);
+  box-shadow:0 0 0 3px rgba(0,0,0,0.08);
+}
+.dark-theme .unit-toggle input:checked + .unit-dot{ box-shadow:0 0 0 3px rgba(255,255,255,0.18); }
+.unit-toggle-label{ font-size:.72rem; font-weight:600; color:var(--fg-light-color); }
+.unit-toggle input:focus-visible + .unit-dot{ outline:2px solid var(--fg-color); outline-offset:2px; }
+
+/* Theme chips */
+.theme-chip{
+  width:26px; height:26px; border-radius:999px; border:2px solid var(--border-color);
+  background:#ccc; cursor:pointer; padding:0; outline:none;
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.55);
+  transition: transform .12s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.theme-chip:hover{ transform:translateY(-1px); }
+.theme-chip.is-active{
+  box-shadow:0 0 0 3px rgba(0,0,0,0.08), inset 0 0 0 2px rgba(255,255,255,0.55);
+  border-color:var(--accent-color);
+}
+.theme-chip[data-theme="default"]{ background:linear-gradient(45deg,#ddd 0%,#fff 100%); }
+.theme-chip[data-theme="violet"] { background:#5e5ce6; }
+.theme-chip[data-theme="blue"]   { background:#2563eb; }
+.theme-chip[data-theme="green"]  { background:#10b981; }
+.theme-chip[data-theme="pink"]   { background:#ec4899; }
+.theme-chip[data-theme="gold"]   { background:#d4af37; }
+
+/* Footer */
+.settings-footer{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding-top:12px; margin-top:6px; border-top:1px solid var(--border-color);
+}
+.footer-toolbar{ display:flex; align-items:center; gap:12px; opacity:.95; }
+.dm-inline{ display:flex; align-items:center; gap:12px; }
+
+/* Reset style screenshot-like */
+.reset-inline{
+  display:inline-flex; align-items:center; gap:6px;
+  border:none; background:transparent; cursor:pointer; padding:6px 8px; border-radius:999px;
+  font-size:.85rem; font-weight:600; letter-spacing:.01em;
+  color: color-mix(in srgb, var(--fg-color) 60%, transparent);
+  transition: background-color .2s ease, color .2s ease, transform .1s ease;
+}
+.reset-inline .reset-icon{ width:16px; height:16px; transition: transform .2s ease; }
+.reset-inline:hover{
+  color: var(--reset-accent);
+  background: color-mix(in srgb, var(--reset-accent) 12%, transparent);
+}
+.dark-theme .reset-inline:hover{
+  background: color-mix(in srgb, var(--reset-accent) 18%, transparent);
+}
+.reset-inline:active{ transform: translateY(1px); }
+.reset-inline:hover .reset-icon{ transform: rotate(-22deg); }
+.reset-inline:focus-visible{
+  outline:2px solid var(--reset-accent);
+  outline-offset:2px;
+}
+
+/* Main display */
+#main-display{ text-align:center; }
+.title{ margin:0 0 20px; font-size:1.125rem; font-weight:600; }
+.timer-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:20px; }
+.timer-unit{ display:flex; flex-direction:column; }
+.timer-unit .number{
+  font-size:2.25rem; font-weight:700; line-height:1.1; font-variant-numeric:tabular-nums; letter-spacing:.02em;
+  color:var(--fg-color);
+}
+.has-accent .timer-unit .number{ color:var(--accent-color); }
+.timer-unit .label{ font-size:.75rem; font-weight:500; opacity:.55; text-transform:uppercase; letter-spacing:.08em; }
+.finished-message{ display:none; font-size:1.125rem; font-weight:600; padding:32px 0; line-height:1.4; opacity:.8; }
+
+/* Footer text (meilleur contraste que opacity .5) */
+.footer{
+  margin:0; font-size:.75rem; font-weight:500;
+  color: color-mix(in srgb, var(--fg-color) 60%, transparent);
+}
+
+/* SR-only */
+.sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+/* Responsive */
+@media (max-width:360px){
+  .widget-container{ padding:16px; border-radius:12px; }
+  .timer-unit .number{ font-size:1.85rem; }
+  .timer-unit .label{ font-size:.68rem; }
+}
+@media (min-width:560px){
+  .widget-container{ max-width:460px; padding:28px; }
+  .timer-unit .number{ font-size:2.6rem; }
+}
+/* === Switch dark mode (structure input + label.slider) === */
+.switch-container{ position:relative; width:44px; height:24px; }
+
+/* l'input recouvre toute la zone (click clavier/souris) mais reste invisible */
+.switch-container input{
+  position:absolute; inset:0; opacity:0; cursor:pointer;
+}
+
+/* piste du switch */
+.slider{
+  display:block;
+  position:absolute; inset:0; border-radius:999px; cursor:pointer;
+  background:var(--ring-color); transition:.3s;
+}
+
+/* pastille */
+.slider:before{
+  content:""; position:absolute; left:2px; bottom:2px; width:20px; height:20px;
+  background:#fff; border-radius:50%; transition:.3s;
+  box-shadow:0 1px 2px rgba(0,0,0,0.25);
+}
+
+/* pastille à droite quand coché */
+.switch-container input:checked + .slider:before{ transform:translateX(20px); }
+
+/* thèmes & focus */
+.dark-theme .slider{ background:rgba(255,255,255,0.26); }
+.dark-theme .slider:before{ box-shadow:0 1px 3px rgba(0,0,0,0.55); }
+.switch-container input:focus-visible + .slider{
+  outline:2px solid var(--accent-color); outline-offset:2px;
+  box-shadow:0 0 0 3px rgba(94,92,230,0.25);
+}
+
+/* groupe d’icônes/slider (tu utilises .dm-inline) */
+.dm-inline{ display:flex; align-items:center; gap:12px; }
+.dm-inline svg{ width:16px; height:16px; fill:var(--fg-light-color); opacity:.9; }
+.dark-theme .dm-inline svg{ fill:rgba(255,255,255,.85); }
+
+</style>
 </head>
 <body>
-    <div class="widget-container" id="widget-container">
-        <button class="settings-toggle" id="settings-toggle" aria-label="Open Settings">
-            <svg id="gear-icon" viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.44,0.17-0.48,0.41L9.18,5.03C8.59,5.27,8.06,5.59,7.56,5.97L5.17,5.01C4.95,4.94,4.7,5.01,4.58,5.23L2.66,8.55 c-0.11,0.2-0.06,0.47,0.12,0.61l2.03,1.58C4.74,11.06,4.70,11.38,4.70,11.70c0,0.32,0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.42,2.22 c0.04,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.48-0.41l0.42-2.22c0.59-0.24,1.12-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0.01,0.59-0.22l1.92-3.32c0.11-0.2,0.06-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
-            <svg id="close-icon" viewBox="0 0 24 24" style="display: none;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-        </button>
-        <div class="settings-panel" id="settings-panel">
-            <div class="settings-panel-header">
-                <h2>Countdown Settings</h2>
-            </div>
-            <div class="settings-content">
-                <div class="settings-section">
-                    <div class="preset-tabs"><div class="preset-indicator" id="preset-indicator"></div><button class="btn-preset" data-preset="1h">1 Hour</button><button class="btn-preset" data-preset="24h">24 Hours</button><button class="btn-preset" data-preset="7d">7 Days</button><button class="btn-preset" data-preset="custom" >Custom</button></div>
-                </div>
-                <div class="settings-section custom-controls" id="custom-controls">
-                    <h2 class="settings-header">Custom Deadline</h2>
-                  <div class="setting-row two-inputs">
-                      <label for="start-date-input">Start</label>
-                      <input type="datetime-local" id="start-date-input">
-                      <label for="target-date-input">End</label>
-                      <input type="datetime-local" id="target-date-input">
-                  </div>
-                </div>
-                <div class="settings-section">
-                  <h2 class="settings-header">Display</h2>
-                  <div class="horizontal-toggles" role="group" aria-label="Units to display">
-                    <label class="unit-toggle">
-                      <input type="checkbox" id="unit-days" data-unit="days" checked>
-                      <span class="unit-dot" aria-hidden="true"></span>
-                      <span class="unit-toggle-label">Days</span>
-                    </label>
-                    <label class="unit-toggle">
-                      <input type="checkbox" id="unit-hours" data-unit="hours" checked>
-                      <span class="unit-dot" aria-hidden="true"></span>
-                      <span class="unit-toggle-label">Hours</span>
-                    </label>
-                    <label class="unit-toggle">
-                      <input type="checkbox" id="unit-mins" data-unit="mins" checked>
-                      <span class="unit-dot" aria-hidden="true"></span>
-                      <span class="unit-toggle-label">Mins</span>
-                    </label>
-                    <label class="unit-toggle">
-                      <input type="checkbox" id="unit-secs" data-unit="secs" checked>
-                      <span class="unit-dot" aria-hidden="true"></span>
-                      <span class="unit-toggle-label">Secs</span>
-                    </label>
-                  </div>
-                </div>
-            </div>
-            <div class="settings-footer">
-                <div class="dark-mode-toggle" aria-label="Toggle Theme">
-                    <svg class="sun-icon" viewBox="0 0 24 24"><path d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1S11,19.45,11,20z"/></svg>
-                    <div class="switch-container"><input type="checkbox" id="dark-mode-checkbox"><label for="dark-mode-checkbox" class="slider"></label></div>
-                    <svg class="moon-icon" viewBox="0 0 24 24"><path d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.10-1.36 c-0.98,1.37-2.58,2.26-4.40,2.26c-2.98,0-5.40-2.42-5.40-5.40c0-1.82,0.89-3.42,2.26-4.40C12.92,3.04,12.46,3,12,3z"/></svg>
-                </div>
-            </div>
+<div class="widget-container" id="widget-container">
+  <!-- toggle -->
+  <button class="settings-toggle" id="settings-toggle" aria-label="Ouvrir les paramètres" aria-controls="settings-panel" aria-expanded="false">
+    <svg id="gear-icon" viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0 -.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>
+    <svg id="close-icon" viewBox="0 0 24 24" style="display:none;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+  </button>
+
+  <!-- panel -->
+  <div class="settings-panel" id="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title" tabindex="-1">
+    <div class="settings-panel-header"><h2 id="settings-title">Paramètres</h2></div>
+
+    <div class="settings-content">
+      <div class="settings-section">
+        <div class="input-row">
+          <label for="title-input">Titre</label>
+          <input type="text" id="title-input" placeholder="Ex : Anniversaire de Marie">
         </div>
-        <div id="main-display">
-            <p id="subtitle" class="subtitle"></p>
-            <h1 id="title" class="title"></h1>
-            <div id="timer-grid" class="timer-grid">
-                <div class="timer-unit" data-unit="days"><span id="days" class="number">00</span><span class="label">Days</span></div>
-                <div class="timer-unit" data-unit="hours"><span id="hours" class="number">00</span><span class="label">Hours</span></div>
-                <div class="timer-unit" data-unit="minutes"><span id="minutes" class="number">00</span><span class="label">Mins</span></div>
-                <div class="timer-unit" data-unit="seconds"><span id="seconds" class="number">00</span><span class="label">Secs</span></div>
-            </div>
-            <div id="finished-message" class="finished-message"></div>
-            <div id="progress-container" class="progress-container"><div id="progress-bar" class="progress-bar"></div></div>
-            <p id="footer" class="footer"></p>
+        <div class="input-row">
+          <label for="target-date-input">Date de fin</label>
+          <input type="datetime-local" id="target-date-input" aria-label="Date et heure de fin">
+          <small id="dtl-help" class="help-text" style="display:none;">Astuce : si le sélecteur n’apparaît pas, utilisez les boutons rapides ci-dessous.</small>
         </div>
+        <div class="horizontal-toggles" aria-label="Raccourcis rapides">
+          <button class="btn-chip" data-mins="25">Maintenant + 25 min</button>
+          <button class="btn-chip" data-mins="45">+ 45 min</button>
+          <button class="btn-chip" data-mins="60">+ 1 h</button>
+          <button class="btn-chip" data-mins="90">+ 1 h 30</button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h2 class="settings-header">Affichage</h2>
+        <div class="horizontal-toggles" id="units-group" role="group" aria-label="Unités à afficher">
+          <label class="unit-toggle"><input type="checkbox" data-unit="days" checked><span class="unit-dot" aria-hidden="true"></span><span class="unit-toggle-label">Jours</span></label>
+          <label class="unit-toggle"><input type="checkbox" data-unit="hours" checked><span class="unit-dot" aria-hidden="true"></span><span class="unit-toggle-label">Heures</span></label>
+          <label class="unit-toggle"><input type="checkbox" data-unit="mins"  checked><span class="unit-dot" aria-hidden="true"></span><span class="unit-toggle-label">Minutes</span></label>
+          <label class="unit-toggle"><input type="checkbox" data-unit="secs"  checked><span class="unit-dot" aria-hidden="true"></span><span class="unit-toggle-label">Secondes</span></label>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h2 class="settings-header">Apparence</h2>
+        <div class="horizontal-toggles" id="theme-swatches" role="group" aria-label="Thèmes recommandés">
+          <button class="theme-chip is-active" data-theme="default" title="Défaut"  aria-pressed="true"></button>
+          <button class="theme-chip" data-theme="violet"  title="Violet"  aria-pressed="false"></button>
+          <button class="theme-chip" data-theme="blue"    title="Bleu"    aria-pressed="false"></button>
+          <button class="theme-chip" data-theme="green"   title="Vert"    aria-pressed="false"></button>
+          <button class="theme-chip" data-theme="pink"    title="Rose"    aria-pressed="false"></button>
+          <button class="theme-chip" data-theme="gold"    title="Or"      aria-pressed="false"></button>
+        </div>
+      </div>
     </div>
+
+    <!-- Footer: switch gauche, Reset à droite -->
+    <div class="settings-footer">
+      <div class="footer-toolbar" role="group" aria-label="Actions">
+        <div class="dm-inline">
+          <svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9zM12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5S14.76,7,12,7z M2,13h2a1,1,0,0,0,0-2H2a1,1,0,0,0,0,2zm16,0h2a1,1,0,0,0,0-2h-2a1,1,0,0,0,0,2zM11,2v2a1,1,0,0,0,2,0V2a1,1,0,0,0-2,0zm0,18v2a1,1,0,0,0,2,0v-2a1,1,0,0,0-2,0z"/></svg>
+          <div class="switch-container">
+            <input type="checkbox" id="dark-mode-checkbox"><label for="dark-mode-checkbox" class="slider"></label>
+          </div>
+          <svg class="moon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </div>
+      </div>
+
+      <button id="reset-inline" class="reset-inline" type="button" aria-label="Réinitialiser les réglages">
+        <svg class="reset-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 5V2L7 6.5 12 11V8a6 6 0 1 1-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Reset</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- main display -->
+  <div id="main-display">
+    <h1 id="title" class="title"></h1>
+    <div id="timer-grid" class="timer-grid">
+      <div class="timer-unit" data-unit="days"><span id="days" class="number">00</span><span class="label">Jours</span></div>
+      <div class="timer-unit" data-unit="hours"><span id="hours" class="number">00</span><span class="label">Heures</span></div>
+      <div class="timer-unit" data-unit="minutes"><span id="minutes" class="number">00</span><span class="label">Minutes</span></div>
+      <div class="timer-unit" data-unit="seconds"><span id="seconds" class="number">00</span><span class="label">Secondes</span></div>
+    </div>
+    <div id="finished-message" class="finished-message" aria-live="polite"></div>
+    <p id="sr-remaining" class="sr-only" aria-live="polite"></p>
+    <p id="sr-alert" class="sr-only" aria-live="polite"></p>
+    <p id="footer" class="footer"></p>
+  </div>
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const params = new URLSearchParams(window.location.search);
-    const root = document.documentElement;
-    
-    const elements = {
-        container: document.getElementById('widget-container'), mainDisplay: document.getElementById('main-display'),
-        title: document.getElementById('title'), subtitle: document.getElementById('subtitle'), footer: document.getElementById('footer'),
-        timerGrid: document.getElementById('timer-grid'), finishedMessage: document.getElementById('finished-message'),
-        progressContainer: document.getElementById('progress-container'), progressBar: document.getElementById('progress-bar'),
-        settings: {
-            toggle: document.getElementById('settings-toggle'), panel: document.getElementById('settings-panel'),
-            darkModeCheckbox: document.getElementById('dark-mode-checkbox'),
-            unitToggles: document.querySelectorAll('.settings-panel input[data-unit]'),
-            presetIndicator: document.getElementById('preset-indicator'), presetBtns: document.querySelectorAll('.btn-preset'),
-            customControls: document.getElementById('custom-controls'),
-            targetDateInput: document.getElementById('target-date-input'),
-            startDateInput: document.getElementById('start-date-input'),
-            gearIcon: document.getElementById('gear-icon'), 
-            closeIcon: document.getElementById('close-icon'),
-        }
+  const params=new URLSearchParams(window.location.search);
+  const root=document.documentElement;
+
+  const el={
+    container:document.getElementById('widget-container'),
+    title:document.getElementById('title'),
+    timerGrid:document.getElementById('timer-grid'),
+    finishedMessage:document.getElementById('finished-message'),
+    footer:document.getElementById('footer'),
+    srRemaining:document.getElementById('sr-remaining'),
+    srAlert:document.getElementById('sr-alert'),
+    settings:{
+      toggle:document.getElementById('settings-toggle'),
+      panel:document.getElementById('settings-panel'),
+      titleInput:document.getElementById('title-input'),
+      targetDateInput:document.getElementById('target-date-input'),
+      quickBtns:document.querySelectorAll('.btn-chip'),
+      gearIcon:document.getElementById('gear-icon'),
+      closeIcon:document.getElementById('close-icon'),
+      darkModeCheckbox:document.getElementById('dark-mode-checkbox'),
+      unitToggles:document.querySelectorAll('.settings-panel input[data-unit]'),
+      themeChips:document.querySelectorAll('#theme-swatches .theme-chip'),
+      themeGroup:document.getElementById('theme-swatches'),
+      unitsGroup:document.getElementById('units-group'),
+      dtlHelp:document.getElementById('dtl-help')
+    },
+    resetInline:document.getElementById('reset-inline'),
+    // cache refs numériques
+    numRefs:{
+      days:document.getElementById('days'),
+      hours:document.getElementById('hours'),
+      minutes:document.getElementById('minutes'),
+      seconds:document.getElementById('seconds')
+    }
+  };
+
+  const UNIT_MAP={days:'days',hours:'hours',mins:'minutes',secs:'seconds'};
+  const THEME_MAP={violet:'#5e5ce6',blue:'#2563eb',green:'#10b981',pink:'#ec4899',gold:'#d4af37'};
+
+  const toLocalISOString=(d)=>{ if(!d||isNaN(d.getTime())) return ""; const tz=(new Date()).getTimezoneOffset()*60000; return (new Date(d - tz)).toISOString().slice(0,16); };
+
+  /* ---- tz helpers ---- */
+  const parseOffsetString=s=>{ if(!s) return null; s=String(s).trim(); const sign=s[0]; if(sign!=='+'&&sign!=='-') return null; let rest=s.slice(1).replace(':',''); if(!(rest.length===2||rest.length===4)) return null; const hh=parseInt(rest.slice(0,2),10); const mm=rest.length===4?parseInt(rest.slice(2),10):0; if(Number.isNaN(hh)||Number.isNaN(mm)) return null; return (sign==='-'?-1:1)*(hh*60+mm); };
+  const getTzOffsetMinutes=(tz, atDate) => {
+    const direct = parseOffsetString(tz);
+    if (direct !== null) return direct;
+    try {
+      const fmt = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz, timeZoneName: 'shortOffset', hour12: false,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+      const parts = fmt.formatToParts(atDate);
+      const tn = (parts.find(p => p.type === 'timeZoneName') || {}).value || '';
+      let sign = 1, hh = 0, mm = 0;
+      const plus = tn.lastIndexOf('+'), minus = tn.lastIndexOf('-');
+      const idx = Math.max(plus, minus);
+      if (idx !== -1) {
+        sign = tn[idx] === '-' ? -1 : 1;
+        const tail = tn.slice(idx + 1).trim();
+        const mmSep = tail.indexOf(':');
+        if (mmSep !== -1) { hh = parseInt(tail.slice(0, mmSep), 10); mm = parseInt(tail.slice(mmSep + 1), 10); }
+        else { hh = parseInt(tail, 10); mm = 0; }
+        if (!Number.isNaN(hh)) return sign * (hh * 60 + (Number.isNaN(mm) ? 0 : mm));
+      }
+    } catch (_) {}
+    try {
+      const fmt = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz, hour12: false,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+      const map = fmt.formatToParts(atDate).reduce((a,p)=>{ a[p.type]=p.value; return a; }, {});
+      const Y = +map.year, M = +map.month, D = +map.day, H = +map.hour, I = +map.minute, S = +map.second;
+      const localLike = Date.UTC(Y, (M||1)-1, D||1, H||0, I||0, S||0);
+      return Math.round((localLike - atDate.getTime()) / 60000);
+    } catch (_) { return -atDate.getTimezoneOffset(); }
+  };
+  const parseNaiveInTZ=(str,tz)=>{ if(!str) return null; const s=String(str).trim().replace(' ','T'); const tIndex=s.indexOf('T'); if(tIndex===-1) return null; const dPart=s.slice(0,tIndex), timePart=s.slice(tIndex+1); const dSeg=dPart.split('-'), tSeg=timePart.split(':'); if(dSeg.length<3||tSeg.length<2) return null; const y=+dSeg[0], mo=+dSeg[1], d=+dSeg[2], h=+tSeg[0], mi=+tSeg[1], se=tSeg[2]?+tSeg[2]:0; if([y,mo,d,h,mi,se].some(n=>Number.isNaN(n))) return null; let t=Date.UTC(y,mo-1,d,h,mi,se); let off=getTzOffsetMinutes(tz,new Date(t)); let t2=t-off*60000; const off2=getTzOffsetMinutes(tz,new Date(t2)); if(off2!==off) t2=t-off2*60000; return new Date(t2); };
+  const hasExplicitTZ=s=>{ if(!s) return false; const u=String(s); if(u.toUpperCase().includes('Z')) return true; const p=u.lastIndexOf('+'), m=u.lastIndexOf('-'); const idx=Math.max(p,m); const tPos=u.indexOf('T'); return idx!==-1 && idx>tPos; };
+
+  /* ---- state ---- */
+  const STRINGS={
+    opened:"Paramètres ouverts.",
+    closed:"Paramètres fermés.",
+    themeApplied:(name)=>`Thème ${name} appliqué.`,
+    unitsGuard:"Au moins une unité doit rester active.",
+  };
+
+  let settings={
+    visibleUnits:{days:true,hours:true,minutes:true,seconds:true},
+    isDark:false,
+    accentColor:null,
+    eventTitle:'Compte à rebours',
+    eventTargetISO:null,
+    userOverrodeDate:false,
+    userOverrodeTitle:false,
+    selectedTheme:null,
+    footer:'',
+    finishText:''
+  };
+  let config={}; let timerInterval; let lastFocused=null;
+
+  const STORAGE_KEY='countdownSettingsV9';
+  const save=()=>localStorage.setItem(STORAGE_KEY,JSON.stringify(settings));
+  const load=()=>{ try{ const s=JSON.parse(localStorage.getItem(STORAGE_KEY)); if(s) settings=Object.assign(settings,s); }catch(_){ } };
+
+  /* ---- rendering ---- */
+  const updateCountdown=()=> {
+    const now=Date.now();
+    if(!config.targetDate||isNaN(config.targetDate.getTime())) return;
+    const dist=config.targetDate.getTime()-now;
+    if(dist<0){
+      clearInterval(timerInterval);
+      el.timerGrid.style.display='none';
+      el.finishedMessage.style.display='block';
+      el.finishedMessage.textContent=(settings.finishText&&settings.finishText.trim())
+        ? settings.finishText
+        : ((settings.eventTitle||"L'événement")+' a commencé !');
+      if(el.srRemaining){ el.srRemaining.textContent = el.finishedMessage.textContent; }
+      return;
+    }
+    el.timerGrid.style.display='grid';
+    el.finishedMessage.style.display='none';
+    const parts={
+      days:String(Math.floor(dist/86400000)),
+      hours:String(Math.floor((dist%86400000)/3600000)),
+      minutes:String(Math.floor((dist%3600000)/60000)),
+      seconds:String(Math.floor((dist%60000)/1000))
     };
-    
-    let config = {};
-    let settings = {};
-    let timerInterval;
+    for(const k in parts){ el.numRefs[k].textContent = parts[k].padStart(2,'0'); }
 
-    const UNIT_MAP = { days:'days', hours:'hours', mins:'minutes', secs:'seconds' };
+    // Mise à jour accessible chaque minute
+    if(el.srRemaining && parts.seconds === '00'){
+      const d = +parts.days, h = +parts.hours, m = +parts.minutes;
+      el.srRemaining.textContent = `Temps restant : ${d} jour${d>1?'s':''}, ${h} heure${h>1?'s':''}, ${m} minute${m>1?'s':''}.`;
+    }
+  };
 
-    const toLocalISOString = (date) => {
-        if (!date || isNaN(date.getTime())) return "";
-        const tzoffset = (new Date()).getTimezoneOffset() * 60000;
-        return (new Date(date - tzoffset)).toISOString().slice(0, 16);
-    };
-    const calculateDate = (offsetHours) => new Date(Date.now() + offsetHours * 60 * 60 * 1000);
-    const presets = {
-        '1h': { name: '1 Hour', target: () => calculateDate(1), start: () => new Date() },
-        '24h': { name: '24 Hours', target: () => calculateDate(24), start: () => new Date() },
-        '7d': { name: '7 Days', target: () => calculateDate(168), start: () => new Date() },
-    };
-    
-
-    const updateCountdown = () => {
-        const now = new Date().getTime();
-
-        // Handle "waiting" state if start date is in the future
-        if (config.startDate && now < config.startDate.getTime()) {
-            elements.timerGrid.style.display = 'none';
-            elements.progressContainer.style.display = 'none';
-            elements.finishedMessage.style.display = 'block';
-            
-            const timeUntilStart = config.startDate.getTime() - now;
-            const days = Math.floor(timeUntilStart / (1000*60*60*24));
-            const hours = Math.floor((timeUntilStart % (1000*60*60*24)) / (1000*60*60));
-            elements.finishedMessage.innerHTML = `Starts in<br>${days}d ${hours}h`;
-            return;
-        }
-
-        // Ensure main display is visible if we've passed the start time
-        elements.timerGrid.style.display = 'grid';
-        elements.finishedMessage.style.display = 'none';
-
-        if (!config.targetDate || isNaN(config.targetDate.getTime())) return;
-        
-        const distance = config.targetDate.getTime() - now;
-        if (distance < 0) {
-            clearInterval(timerInterval);
-            elements.timerGrid.style.display = 'none';
-            elements.finishedMessage.style.display = 'block';
-            elements.finishedMessage.textContent = (config.title || 'Event') + ' has started!';
-            if (config.startDate) elements.progressBar.style.width = '100%';
-            return;
-        }
-        const timeParts = {
-            days: String(Math.floor(distance / (1000*60*60*24))),
-            hours: String(Math.floor((distance % (1000*60*60*24)) / (1000*60*60))),
-            minutes: String(Math.floor((distance % (1000*60*60)) / (1000*60))),
-            seconds: String(Math.floor((distance % (1000*60)) / 1000)),
-        };
-        Object.keys(timeParts).forEach(part => {
-            const el = document.getElementById(part);
-            if (el) el.textContent = timeParts[part].padStart(2, '0');
-        });
-        
-        if (config.startDate && !isNaN(config.startDate.getTime()) && config.targetDate > config.startDate) {
-            elements.progressContainer.style.display = 'block';
-            const total = config.targetDate.getTime() - config.startDate.getTime();
-            const elapsed = now - config.startDate.getTime();
-            let progress = (elapsed / total) * 100;
-            progress = Math.max(0, Math.min(100, progress));
-            elements.progressBar.style.width = `${progress}%`;
-        } else {
-            elements.progressContainer.style.display = 'none';
-        }
-    };
-
-    const showSettingsPanel = (show) => {
-        elements.settings.panel.classList.toggle('visible', show);
-        elements.container.classList.toggle('settings-active', show);
-        elements.settings.gearIcon.style.display = show ? 'none' : 'block';
-        elements.settings.closeIcon.style.display = show ? 'block' : 'none';
-
-        // Pause timer when settings are open, resume on close
-        if (show) {
-            clearInterval(timerInterval);
-        } else {
-            updateCountdown(); // Update immediately on close
-            timerInterval = setInterval(updateCountdown, 1000);
-        }
-
-        if (show) {
-            setTimeout(updatePresetHighlighting, 50);
-        }
-    };
-
-    const saveSettings = () => localStorage.setItem('countdownSettingsV5', JSON.stringify(settings));
-    const loadSettings = () => {
-        try {
-            const saved = JSON.parse(localStorage.getItem('countdownSettingsV5')) || {};
-            const vu = saved.visibleUnits || {};
-            settings = {
-                visibleUnits: {
-                  days:    vu.days    !== false,
-                  hours:   vu.hours   !== false,
-                  minutes: vu.minutes !== false,
-                  seconds: vu.seconds !== false,
-                },
-                isDark: saved.isDark || false,
-                activePreset: saved.activePreset || '24h',
-                customTargetDate: saved.customTargetDate || null,
-                customStartDate: saved.customStartDate || null,
-            };
-        } catch (e) { localStorage.removeItem('countdownSettingsV5'); }
-    };
-    
-    const applyTheme = (isDark, fromLoad = false) => {
-        settings.isDark = isDark;
-        elements.container.classList.toggle('dark-theme', isDark);
-        elements.settings.darkModeCheckbox.checked = isDark;
-        if (!fromLoad) saveSettings();
-    };
-
-    // sync visibility of grid units + checkboxes
-    const applyUnitVisibility = (fromLoad = false) => {
-        let count = 0;
-        document.querySelectorAll('.timer-unit').forEach(unitEl => {
-            const key = unitEl.dataset.unit; // days|hours|minutes|seconds
-            const visible = settings.visibleUnits[key] !== false;
-            unitEl.style.display = visible ? 'flex' : 'none';
-            if (visible) count++;
-        });
-        elements.timerGrid.style.gridTemplateColumns = `repeat(${Math.max(1, count)}, 1fr)`;
-        // sync the checkboxes state
-        elements.settings.unitToggles.forEach(cb => {
-            const mapped = UNIT_MAP[cb.dataset.unit];
-            cb.checked = !!settings.visibleUnits[mapped];
-        });
-        if (!fromLoad) saveSettings();
-    };
-    
-    const updatePresetHighlighting = () => {
-        const btns = Array.from(elements.settings.presetBtns);
-        let activeBtn = null;
-        btns.forEach(btn => {
-            const isMatch = btn.dataset.preset === settings.activePreset;
-            btn.classList.toggle('active', isMatch);
-            if (isMatch) activeBtn = btn;
-        });
-        // This new line toggles the visibility of the custom controls
-        elements.settings.customControls.classList.toggle('visible', settings.activePreset === 'custom');
-        
-        const indicator = elements.settings.presetIndicator;
-        if (activeBtn) {
-            indicator.style.width = `${activeBtn.offsetWidth}px`;
-            indicator.style.transform = `translateX(${activeBtn.offsetLeft}px)`;
-        }
-    };
-
-    const applyPreset = (presetKey) => {
-        settings.activePreset = presetKey;
-        if (presetKey !== 'custom') {
-            const preset = presets[presetKey];
-            config.targetDate = preset.target();
-            config.startDate = preset.start();
-            settings.customTargetDate = config.targetDate.toISOString();
-            settings.customStartDate = config.startDate.toISOString();
-        } else {
-            config.targetDate = settings.customTargetDate ? new Date(settings.customTargetDate) : calculateDate(24);
-            config.startDate = settings.customStartDate ? new Date(settings.customStartDate) : null;
-        }
-        elements.settings.targetDateInput.value = toLocalISOString(config.targetDate);
-        elements.settings.startDateInput.value = toLocalISOString(config.startDate);
-        updatePresetHighlighting();
-        updateCountdown();
-        saveSettings();
-    };
-
-    const handleCustomDateChange = () => {
-        settings.activePreset = 'custom';
-        const targetValue = elements.settings.targetDateInput.value;
-        const startValue = elements.settings.startDateInput.value;
-        config.targetDate = targetValue ? new Date(targetValue) : calculateDate(24);
-        config.startDate = startValue ? new Date(startValue) : null;
-        settings.customTargetDate = config.targetDate.toISOString();
-        settings.customStartDate = config.startDate ? config.startDate.toISOString() : null;
-        updatePresetHighlighting();
-        updateCountdown();
-        saveSettings();
-    };
-    
-   
-    
-    elements.settings.toggle.addEventListener('click', () => {
-        const isCurrentlyVisible = elements.settings.panel.classList.contains('visible');
-        showSettingsPanel(!isCurrentlyVisible);
+  const applyUnitVisibility=(fromLoad=false)=>{
+    let count=0;
+    document.querySelectorAll('.timer-unit').forEach(u=>{
+      const key=u.dataset.unit; const vis=settings.visibleUnits[key]!==false;
+      u.style.display=vis?'flex':'none'; if(vis) count++;
     });
-    
-    elements.settings.darkModeCheckbox.addEventListener('change', (e) => applyTheme(e.target.checked));
-    // handle badge checkboxes (map mins/secs -> minutes/seconds)
-    elements.settings.unitToggles.forEach(cb => cb.addEventListener('change', (e) => {
-        const mapped = UNIT_MAP[e.target.dataset.unit];
-        settings.visibleUnits[mapped] = e.target.checked;
-        applyUnitVisibility();
-    }));
-    elements.settings.presetBtns.forEach(btn => btn.addEventListener('click', (e) => applyPreset(e.currentTarget.dataset.preset)));
-    elements.settings.targetDateInput.addEventListener('input', handleCustomDateChange);
-    elements.settings.startDateInput.addEventListener('input', handleCustomDateChange);
-    
-    // Ajouter un écouteur de redimensionnement pour mettre à jour l'indicateur
-    window.addEventListener('resize', updatePresetHighlighting);
-    
-    const init = () => {
-        if (params.get("compact") === "1") document.body.classList.add("compact");
-        const getHexColor = (name) => (/^[0-9a-fA-F]{6}$/.test(params.get(name)) ? params.get(name) : null);
-        const colors = { bg: getHexColor("bg"), panel: getHexColor("panel"), fg: getHexColor("fg"), accent: getHexColor("accent"), ring: getHexColor("ring") };
-        Object.entries(colors).forEach(([key, value]) => { if (value) root.style.setProperty(`--${key}-color`, `#${value}`); });
+    el.timerGrid.style.gridTemplateColumns=`repeat(${Math.max(1,count)},1fr)`;
+    el.settings.unitToggles.forEach(cb=>{ const mapped=UNIT_MAP[cb.dataset.unit]; cb.checked=!!settings.visibleUnits[mapped]; });
+    if(!fromLoad) save();
+  };
 
-        config.title = params.get("title")?.trim() || "Event Countdown";
-        if (params.has("date")) {
-            config.targetDate = new Date(params.get("date"));
-            config.startDate = params.has("start") ? new Date(params.get("start")) : null;
-            settings.activePreset = "custom";
-            settings.customTargetDate = config.targetDate.toISOString();
-            settings.customStartDate = config.startDate ? config.startDate.toISOString() : null;
-        } else {
-            loadSettings();
-        }
-        
-        applyPreset(settings.activePreset);
-        applyTheme(settings.isDark, true);
-        applyUnitVisibility(true);
-        
-        elements.title.textContent = config.title;
-        if(config.subtitle) elements.subtitle.textContent = config.subtitle; else elements.subtitle.style.display = 'none';
-        if(config.footer) elements.footer.textContent = config.footer; else elements.footer.style.display = 'none';
-        
-        updateCountdown();
-        timerInterval = setInterval(updateCountdown, 1000);
-    };
+  // Thème
+  const applyTheme=(isDark,fromLoad=false)=>{
+    settings.isDark=isDark;
+    el.container.classList.toggle('dark-theme',isDark);
+    if(el.settings.darkModeCheckbox) el.settings.darkModeCheckbox.checked=isDark;
+    if(!fromLoad) save();
+  };
 
-    init();
+  const applyAccentColor=(color,fromLoad=false)=>{
+    root.style.setProperty('--accent-color', color || 'var(--fg-color)');
+    if(!fromLoad) save();
+  };
+
+  const syncAccentClass=()=>{ 
+    if(settings.selectedTheme && THEME_MAP[settings.selectedTheme]) el.container.classList.add('has-accent');
+    else el.container.classList.remove('has-accent');
+  };
+
+  const markActiveThemeChip=(activeKey)=>{
+    el.settings.themeChips.forEach(b=>{
+      const isActive = b.dataset.theme===activeKey;
+      b.classList.toggle('is-active', isActive);
+      b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+  };
+
+  const applyThemePreset=(key,fromLoad=false)=>{
+    if(!THEME_MAP[key]) return;
+    settings.selectedTheme=key; settings.accentColor=THEME_MAP[key];
+    applyAccentColor(settings.accentColor,true); syncAccentClass(); markActiveThemeChip(key);
+    if(el.srAlert) el.srAlert.textContent = STRINGS.themeApplied(key);
+    if(!fromLoad) save();
+  };
+
+  const resetToDefaultTheme=()=>{
+    settings.selectedTheme=null; settings.accentColor=null;
+    applyAccentColor(null,true); syncAccentClass(); markActiveThemeChip('default'); save();
+    if(el.srAlert) el.srAlert.textContent = STRINGS.themeApplied('défaut');
+  };
+
+  // Tick aligné
+  const restartTick=()=>{
+    clearInterval(timerInterval);
+    updateCountdown();
+    const delay = 1000 - (Date.now() % 1000);
+    setTimeout(()=>{
+      updateCountdown();
+      timerInterval=setInterval(updateCountdown,1000);
+    }, delay);
+  };
+
+  /* ---- a11y dialog ---- */
+  const getFocusable=c=>[...c.querySelectorAll('a,button,input,select,textarea,[tabindex]:not([tabindex="-1"])')]
+    .filter(node=>!node.hasAttribute('disabled') && node.getClientRects().length>0);
+
+  const showPanel=show=>{
+    el.settings.panel.classList.toggle('visible',show);
+    el.container.classList.toggle('settings-active',show);
+    el.settings.gearIcon.style.display=show?'none':'block';
+    el.settings.closeIcon.style.display=show?'block':'none';
+    el.settings.toggle.setAttribute('aria-expanded',show?'true':'false');
+    if(show) clearInterval(timerInterval); else restartTick();
+  };
+  const openPanel=()=>{
+    lastFocused=document.activeElement; showPanel(true);
+    const main=document.getElementById('main-display'); if('inert'in main) main.inert=true; else main.setAttribute('aria-hidden','true');
+    const f=getFocusable(el.settings.panel); (f[0]||el.settings.titleInput||el.settings.panel).focus();
+    if(el.srAlert) el.srAlert.textContent = STRINGS.opened;
+  };
+  const closePanel=()=>{
+    showPanel(false);
+    const main=document.getElementById('main-display'); if('inert'in main) main.inert=false; else main.removeAttribute('aria-hidden');
+    (lastFocused||el.settings.toggle).focus();
+    if(el.srAlert) el.srAlert.textContent = STRINGS.closed;
+  };
+
+  /* ---- reset soft ---- */
+  const DEFAULTS = () => ({
+    visibleUnits:{days:true,hours:true,minutes:true,seconds:true},
+    isDark:false,
+    accentColor:null,
+    eventTitle:'Compte à rebours',
+    eventTargetISO:new Date(Date.now()+24*60*60*1000).toISOString(),
+    userOverrodeDate:false,
+    userOverrodeTitle:false,
+    selectedTheme:null,
+    footer:'',
+    finishText:''
+  });
+
+  const resetSettings = () => {
+    settings = DEFAULTS();
+    save();
+
+    applyTheme(settings.isDark,true);
+    applyAccentColor(null,true);
+    syncAccentClass();
+    markActiveThemeChip('default');
+
+    applyUnitVisibility(true);
+    el.footer.textContent=''; el.footer.style.display='none';
+
+    el.settings.titleInput.value = settings.eventTitle;
+    el.title.textContent = settings.eventTitle;
+
+    const d = new Date(settings.eventTargetISO);
+    el.settings.targetDateInput.value = toLocalISOString(d);
+    el.settings.targetDateInput.min = toLocalISOString(new Date()); // grise les dates passées
+    config.targetDate = d;
+
+    restartTick();
+    if(el.srAlert) el.srAlert.textContent = 'Réglages réinitialisés.';
+  };
+
+  /* ---- listeners ---- */
+  el.settings.toggle.addEventListener('click',()=> el.settings.panel.classList.contains('visible') ? closePanel() : openPanel());
+  el.settings.panel.addEventListener('keydown',(e)=>{
+    if(e.key==='Escape'){ e.preventDefault(); closePanel(); return; }
+    if(e.key==='Tab' && el.settings.panel.classList.contains('visible')){
+      const f=getFocusable(el.settings.panel); if(!f.length) return;
+      const first=f[0], last=f[f.length-1];
+      if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+      else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+    }
+  });
+  el.settings.panel.addEventListener('click',(e)=>{ if(e.target === el.settings.panel) closePanel(); });
+
+  el.settings.titleInput.addEventListener('input',e=>{
+    settings.eventTitle=e.target.value||'Compte à rebours';
+    settings.userOverrodeTitle=true; save();
+    el.title.textContent=settings.eventTitle;
+  });
+
+  el.settings.targetDateInput.addEventListener('input',e=>{
+    const d=e.target.value ? new Date(e.target.value) : null;
+    if(!d||isNaN(d.getTime())) return;
+    settings.eventTargetISO=d.toISOString(); settings.userOverrodeDate=true; save();
+    config.targetDate=d; restartTick();
+  });
+
+  el.settings.quickBtns.forEach(b=>b.addEventListener('click',e=>{
+    const mins=Math.max(1,Math.min(720,Number(e.currentTarget.dataset.mins)));
+    const d=new Date(Date.now()+mins*60000);
+    settings.eventTargetISO=d.toISOString(); settings.userOverrodeDate=true; save();
+    el.settings.targetDateInput.value=toLocalISOString(d);
+    config.targetDate=d; restartTick();
+  }));
+
+  el.settings.unitToggles.forEach(cb=>cb.addEventListener('change', e=>{
+    const mapped = UNIT_MAP[e.target.dataset.unit];
+    const totalChecked = [...el.settings.unitToggles].filter(x=>x.checked).length;
+    if(totalChecked === 0){
+      e.target.checked = true;
+      const group = el.settings.unitsGroup;
+      if(group){
+        group.classList.remove('invalid-flash');
+        void group.offsetWidth;
+        group.classList.add('invalid-flash');
+      }
+      if(el.srAlert) el.srAlert.textContent = STRINGS.unitsGuard;
+      return;
+    }
+    settings.visibleUnits[mapped] = e.target.checked;
+    applyUnitVisibility();
+  }));
+
+  el.settings.themeChips.forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const key=btn.dataset.theme;
+      if(key==='default') resetToDefaultTheme();
+      else applyThemePreset(key);
+    });
+  });
+
+  const dm=el.settings.darkModeCheckbox;
+  if(dm){
+    dm.addEventListener('change',e=>applyTheme(e.target.checked));
+    document.querySelector('.dark-mode-toggle')?.addEventListener('click',ev=>{
+      if(ev.target===dm || ev.target.closest('label')?.htmlFor==='dark-mode-checkbox') return;
+      dm.checked=!dm.checked; applyTheme(dm.checked);
+    });
+  }
+
+  if(el.resetInline){
+    el.resetInline.addEventListener('click',(e)=>{ e.preventDefault(); resetSettings(); });
+  }
+
+  /* ---- init ---- */
+  const init=()=>{
+    load();
+
+    if(!settings.eventTitle || !String(settings.eventTitle).trim()){
+      settings.eventTitle = 'Compte à rebours';
+      settings.userOverrodeTitle = false;
+    }
+
+    const themeParam=params.get('theme');
+    const accentParam=params.get('accent');
+    const unitsParam=params.get('units');
+    const footerParam=params.get('footer');
+    const titleParam=params.get('title');
+    const dateParam=params.get('date');
+    const durationParam=params.get('duration') ?? params.get('minutes');
+    const tzParam=params.get('tz');
+    const finishParam=params.get('finish');
+    const lockParam=params.get('lock');
+
+    if(params.get('compact')==='1') document.body.classList.add('compact');
+    if(lockParam==='1'||/^(true|yes)$/i.test(String(lockParam||''))) el.settings.toggle.style.display='none';
+
+    if(themeParam==='dark') settings.isDark=true;
+    else if(themeParam==='light') settings.isDark=false;
+    else if(themeParam && THEME_MAP[themeParam]){ settings.selectedTheme=themeParam; settings.accentColor=THEME_MAP[themeParam]; }
+
+    if(accentParam && !(themeParam && THEME_MAP[themeParam])){
+      const hex=`#${accentParam.replace(/[^0-9a-fA-F]/g,'')}`;
+      if(hex.length===4 || hex.length===7){ settings.accentColor=hex; settings.selectedTheme=null; }
+    }
+
+    if(typeof footerParam==='string') settings.footer=footerParam;
+    if(typeof finishParam==='string') settings.finishText=finishParam;
+    if(typeof titleParam==='string' && !settings.userOverrodeTitle) settings.eventTitle=titleParam || 'Compte à rebours';
+
+    if(unitsParam){
+      const u=unitsParam.toLowerCase();
+      settings.visibleUnits={ days:u.includes('d'), hours:u.includes('h'), minutes:u.includes('m'), seconds:u.includes('s') };
+      if(!Object.values(settings.visibleUnits).some(Boolean)){
+        settings.visibleUnits = { days:false, hours:false, minutes:true, seconds:true };
+      }
+    }
+
+    // cible
+    let target=null;
+    if(settings.userOverrodeDate && settings.eventTargetISO){ const t=new Date(settings.eventTargetISO); if(!isNaN(t.getTime())) target=t; }
+    if(!target && dateParam){
+      let d=null;
+      if(hasExplicitTZ(dateParam)) d=new Date(dateParam);
+      else if(tzParam) d=parseNaiveInTZ(dateParam,tzParam) || new Date(dateParam);
+      else d=new Date(dateParam);
+      if(!isNaN(d.getTime())) target=d;
+    }
+    if(!target && durationParam){
+      const mins=Math.max(1,Math.min(720,Number(durationParam)));
+      if(!Number.isNaN(mins)) target=new Date(Date.now()+mins*60000);
+    }
+    if(!target && settings.eventTargetISO){
+      const p=new Date(settings.eventTargetISO);
+      if(!isNaN(p.getTime())) target=p;
+    }
+    if(!target) target=new Date(Date.now()+24*60*60*1000);
+
+    settings.eventTargetISO=target.toISOString();
+
+    // thème / accent
+    applyTheme(settings.isDark,true);
+    if(settings.selectedTheme && THEME_MAP[settings.selectedTheme]) applyThemePreset(settings.selectedTheme,true);
+    else { applyAccentColor(null,true); markActiveThemeChip('default'); }
+    syncAccentClass();
+
+    // unités + footer
+    applyUnitVisibility(true);
+    if(settings.footer && settings.footer.trim()){ el.footer.textContent=settings.footer; el.footer.style.display=''; }
+    else { el.footer.textContent=''; el.footer.style.display='none'; }
+
+    // inputs
+    el.settings.titleInput.value=settings.eventTitle || '';
+    el.title.textContent=settings.eventTitle || '';
+    el.settings.targetDateInput.value=toLocalISOString(target);
+
+    // Griser les dates passées : min = maintenant
+    el.settings.targetDateInput.min = toLocalISOString(new Date());
+
+    // feature detection datetime-local (aide)
+    try{
+      if(!('valueAsDate' in el.settings.targetDateInput)) el.settings.dtlHelp.style.display='';
+    }catch(_){}
+
+    config.targetDate=target;
+    updateCountdown();
+    const delay = 1000 - (Date.now() % 1000);
+    setTimeout(()=>{ updateCountdown(); timerInterval=setInterval(updateCountdown,1000); }, delay);
+    save();
+  };
+
+  init();
 });
 </script>
 </body>
