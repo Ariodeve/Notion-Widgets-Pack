@@ -1,421 +1,740 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-version="1.3.15">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Focus Timer</title>
-    <style>
-        :root {
-            --panel-color: #f7f7f7; --fg-color: #1f1f1f; --fg-light-color: #8a8a8e;
-            --ring-color: #e5e5e5; --border-color: rgba(0,0,0,0.08);
-            --work-color: #34c759; --short-break-color: #ff9500; --long-break-color: #007aff;
-            --accent-color: var(--work-color);
-        }
-        .dark-theme { --panel-color: #1c1c1e; --fg-color: #ffffff; --fg-light-color: #8d8d92; --ring-color: #3a3a3c; --border-color: rgba(255,255,255,0.1); }
-        @keyframes value-pop { 0% { transform: translateY(0); opacity: 1; } 49% { transform: translateY(-5px); opacity: 0; } 50% { transform: translateY(5px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
-        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-3px, 0, 0); } 40%, 60% { transform: translate3d(3px, 0, 0); } }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Focus Timer — Pomodoro</title>
+  <style>
+    :root{
+      --panel-color:#f7f7f7;
+      --fg-color:#1f1f1f;
+      --fg-light-color:#5f5f63; 
+      --ring-color:#e5e5e5;
+      --border-color:rgba(0,0,0,0.08);
+      --work-color:#34c759;
+      --short-break-color:#ff9500;
+      --long-break-color:#007aff;
+      --accent-color:var(--work-color);
+      --accent-ui:#82A31A;
+      --radius:16px;
+      --shadow:0 8px 32px rgba(0,0,0,0.08);
+    }
+    .dark-theme{
+      --panel-color:#1c1c1e;
+      --fg-color:#ffffff;
+      --fg-light-color:#bdbdc2;
+      --ring-color:#3a3a3c;
+      --border-color:rgba(255,255,255,0.1);
+    }
 
-        body { margin: 0; padding: 0; background-color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .widget-container { position: relative; width: 100%; max-width: 380px; background-color: var(--panel-color); border-radius: 16px; padding: 24px; text-align: center; box-sizing: border-box; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08); overflow: hidden; transition: background-color 0.3s ease, color 0.3s ease; color: var(--fg-color); }
-        .settings-toggle { position: absolute; top: 16px; right: 16px; z-index: 20; background: none; border: none; cursor: pointer; padding: 4px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-        .settings-toggle:hover { background-color: var(--ring-color); }
-        .settings-toggle svg { width: 20px; height: 20px; fill: var(--fg-light-color); }
-        .settings-panel { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(var(--panel-color-rgb, 247, 247, 247), 0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 10; padding: 56px 24px 24px 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
-        .dark-theme .settings-panel { --panel-color-rgb: 28, 28, 30; }
-        .settings-panel.visible { opacity: 1; pointer-events: auto; }
-        .settings-panel.anim-shake { animation: shake 0.6s cubic-bezier(.36,.07,.19,.97) both; }
-        .settings-section { display: flex; flex-direction: column; gap: 12px; }
-        .settings-header { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg-light-color); text-align: left; margin: 0; }
-        .preset-tabs { position: relative; display: flex; justify-content: space-around; border-bottom: 1px solid var(--border-color); }
-        .btn-preset { background: none; color: var(--fg-light-color); border: none; padding: 10px 0; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: color 0.3s ease; flex-grow: 1; }
-        .btn-preset.active { color: var(--accent-color); font-weight: 600; }
-        .preset-indicator { position: absolute; bottom: -1px; left: 0; height: 2px; background-color: var(--accent-color); border-radius: 1px; transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1), width 0.4s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.3s ease; }
-        .setting-row { display: flex; justify-content:space-between; align-items: center; }
-        .setting-row label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg-light-color); }
-        .control-group { display: flex; align-items: center; gap: 8px; }
-        .btn-adjust { background-color: var(--ring-color); color: var(--fg-color); border: none; width: 28px; height: 28px; border-radius: 50%; font-size: 1.25rem; line-height: 1; font-weight: 300; cursor: pointer; transition: background-color 0.2s; }
-        .setting-value { font-size: 0.9rem; font-weight: 600; font-variant-numeric: tabular-nums; width: 24px; text-align: center; }
-        .setting-value.anim-pop { animation: value-pop 0.3s ease-in-out; }
-        .settings-footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border-color); }
-        .footer-controls { display: flex; align-items: center; gap: 12px; }
-        .btn-icon { background: none; border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; padding: 0;}
-        .btn-icon:hover { background-color: var(--ring-color); }
-        .btn-icon svg { width: 16px; height: 16px; fill: var(--fg-light-color); }
-        .btn-reset { background: none; color: var(--fg-light-color); border: none; font-size: 0.8rem; font-weight: 500; cursor: pointer; transition: color 0.2s ease; display: inline-flex; align-items: center; gap: 4px; padding: 4px; }
-        .btn-reset:hover { color: var(--accent-color); }
-        .btn-reset svg { width: 14px; height: 14px; fill: currentColor; }
-        .dark-mode-toggle { display: flex; align-items: center; }
-        .switch-container { position: relative; width: 44px; height: 24px; }
-        .switch-container input { opacity: 0; width: 0; height: 0; }
-        .switch-slider { position: absolute; cursor: pointer; inset: 0; background-color: var(--ring-color); transition: 0.3s; border-radius: 34px; }
-        .switch-slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 2px; bottom: 2px; background-color: white; transition: 0.3s; border-radius: 50%; }
-        input:checked + .switch-slider { background-color: var(--accent-color); }
-        input:checked + .switch-slider:before { transform: translateX(20px); }
-        .dark-mode-toggle svg { width: 14px; height: 14px; fill: var(--fg-light-color); }
-        .title { font-size: 1rem; font-weight: 600; margin: 0 0 16px 0; }
-        .timer-display { position: relative; width: 180px; height: 180px; margin: 0 auto; }
-        .timer-display svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-        .timer-display circle { fill: none; stroke-width: 10; }
-        .progress-bg { stroke: var(--ring-color); }
-        .progress-bar { stroke: var(--work-color); stroke-linecap: round; transition: all 0.5s ease; }
-        .timer-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 3.5rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--fg-color); }
-        .rounds-indicator { font-size: 0.875rem; font-weight: 500; margin: 16px 0; height: 16px; }
-        .rounds-indicator .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: currentColor; margin: 0 4px; opacity: 0.3; }
-        .rounds-indicator .dot.completed { opacity: 1; }
-        .controls { display: flex; justify-content: center; gap: 16px; }
-        .btn { background: none; border: none; cursor: pointer; padding: 8px; }
-        .btn-main { background-color: var(--work-color); color: white; padding: 12px; border-radius: 50%; box-shadow: 0 2px 8px -2px var(--work-color); transition: all 0.5s ease; }
-        .btn svg { width: 24px; height: 24px; fill: var(--fg-light-color); }
-        .btn-main svg { fill: white; }
-    </style>
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,1px,1px);white-space:nowrap;border:0}
+    html,body{height:100%;overflow:hidden}
+
+    @keyframes value-pop{0%{transform:translateY(0);opacity:1}49%{transform:translateY(-5px);opacity:0}50%{transform:translateY(5px);opacity:0}100%{transform:translateY(0);opacity:1}}
+    @media (prefers-reduced-motion: reduce){
+      *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+    }
+
+    body{
+      margin:0;padding:0;background-color:#ffffff;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      display:flex;justify-content:center;align-items:center;height:100%;
+    }
+
+    .widget-container{
+      position:relative;width:100%;max-width:380px;background-color:var(--panel-color);
+      border-radius:var(--radius);padding:24px;text-align:center;box-sizing:border-box;
+      box-shadow:var(--shadow);overflow:hidden;transition:background-color .3s ease,color .3s ease;color:var(--fg-color);outline:none;
+    }
+    .widget-container:focus-visible{box-shadow:0 0 0 3px var(--ring-color),var(--shadow)}
+
+    .settings-toggle{position:absolute;top:16px;right:16px;z-index:30;background:none;border:none;cursor:pointer;padding:4px;border-radius:50%;display:flex;align-items:center;justify-content:center;width:36px;height:36px}
+    .settings-toggle:hover{background-color:var(--ring-color)}
+    .settings-toggle:focus-visible{outline:2px solid var(--accent-ui);outline-offset:2px}
+    .settings-toggle svg{width:20px;height:20px;fill:var(--fg-light-color)}
+
+    .settings-panel{position:absolute;inset:0;z-index:20;background-color:rgba(var(--panel-color-rgb,247,247,247),.7);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:56px 24px 24px;box-sizing:border-box;display:flex;flex-direction:column;gap:20px;opacity:0;pointer-events:none;transition:opacity .3s ease}
+    .dark-theme .settings-panel{--panel-color-rgb:28,28,30}
+    .settings-panel.visible{opacity:1;pointer-events:auto}
+
+    .settings-section{display:flex;flex-direction:column;gap:12px}
+    .settings-header{font-size:.875rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--fg-light-color);text-align:left;margin:0}
+
+    .preset-tabs{position:relative;display:flex;justify-content:space-around;border-bottom:1px solid var(--border-color)}
+    .btn-preset{background:none;color:var(--fg-light-color);border:none;padding:10px 0;font-size:.9rem;font-weight:600;cursor:pointer;transition:color .3s ease;flex:1}
+    .btn-preset[aria-selected="true"]{color:var(--accent-ui)}
+    .btn-preset:focus-visible{outline:2px solid var(--accent-ui);outline-offset:2px;border-radius:6px}
+    .btn-preset[disabled]{opacity:.5;cursor:default;pointer-events:none}
+    .preset-indicator{position:absolute;bottom:-1px;left:0;height:2px;background-color:var(--accent-ui);border-radius:1px;transition:transform .4s cubic-bezier(.2,.9,.3,1),width .4s cubic-bezier(.2,.9,.3,1),opacity .3s ease}
+
+    .setting-row{display:flex;justify-content:space-between;align-items:center}
+    .setting-row label{font-size:.875rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--fg-light-color)}
+    .control-group{display:flex;align-items:center;gap:8px}
+    .btn-adjust{background-color:var(--ring-color);color:var(--fg-color);border:none;width:36px;height:36px;border-radius:50%;font-size:1.25rem;line-height:1;font-weight:300;cursor:pointer;transition:background-color .2s}
+    .btn-adjust:focus-visible{outline:2px solid var(--accent-ui);outline-offset:2px}
+    .btn-adjust[disabled]{opacity:.5;pointer-events:none}
+    .setting-value{font-size:.95rem;font-weight:700;font-variant-numeric:tabular-nums;min-width:32px;text-align:center}
+    .setting-value.anim-pop{animation:value-pop .3s ease-in-out}
+
+    .settings-footer{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:16px;border-top:1px solid var(--border-color);gap:12px}
+    .footer-controls{display:flex;align-items:center;gap:12px}
+    .btn-icon{background:none;border:none;width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;justify-content:center;align-items:center;padding:0}
+    .btn-icon:hover{background-color:var(--ring-color)}
+    .btn-icon:focus-visible{outline:2px solid var(--accent-ui);outline-offset:2px}
+    .btn-icon svg{width:16px;height:16px;fill:var(--fg-light-color)}
+
+    .btn-reset{background:none;color:var(--fg-light-color);border:none;font-size:.85rem;font-weight:600;cursor:pointer;transition:color .2s ease;display:inline-flex;align-items:center;gap:6px;padding:4px 6px;border-radius:8px}
+    .btn-reset:hover{color:var(--accent-ui)}
+    .btn-reset:focus-visible{outline:2px solid var(--accent-ui);outline-offset:2px}
+    .btn-reset svg{width:14px;height:14px;fill:currentColor}
+
+    .dark-mode-toggle{display:flex;align-items:center;gap:6px}
+    .switch-container{position:relative;width:44px;height:24px}
+    .switch-container input{opacity:0;width:0;height:0}
+    .switch-slider{position:absolute;cursor:pointer;inset:0;background-color:var(--ring-color);transition:.3s;border-radius:34px}
+    .switch-slider:before{position:absolute;content:"";height:20px;width:20px;left:2px;bottom:2px;background-color:#fff;transition:.3s;border-radius:50%}
+    input:checked + .switch-slider{background-color:var(--accent-ui)}
+    input:checked + .switch-slider:before{transform:translateX(20px)}
+    .dark-mode-toggle svg{width:14px;height:14px;fill:var(--fg-light-color)}
+
+    .session-title { margin:0 0 6px; font-size:.85rem; color:var(--fg-light-color); font-weight:600 }
+    .phase-title   { margin:0 0 16px; font-size:1rem; font-weight:800 }
+
+    .timer-display{position:relative;width:180px;height:180px;margin:0 auto}
+    .timer-display svg{width:100%;height:100%;transform:rotate(-90deg)}
+    .timer-display circle{fill:none;stroke-width:10}
+    .progress-bg{stroke:var(--ring-color)}
+    .progress-bar{stroke:var(--work-color);stroke-linecap:round;transition:all .5s ease}
+
+    .timer-text{
+      position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+      font-size:3.4rem;font-weight:800;font-variant-numeric:tabular-nums;color:var(--fg-color);
+      user-select:none;-webkit-user-select:none;caret-color:transparent;outline:none;pointer-events:none;
+    }
+
+    .rounds-indicator{font-size:.875rem;font-weight:600;margin:16px 0;min-height:16px}
+    .rounds-indicator .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background-color:currentColor;margin:0 4px;opacity:.3}
+    .rounds-indicator .dot.completed{opacity:1}
+
+    .controls{display:flex;justify-content:center;gap:16px}
+    .btn{background:none;border:none;cursor:pointer;padding:10px;border-radius:10px}
+    .btn:focus-visible{outline:2px solid var(--accent-ui);outline-offset:2px}
+    .btn[disabled]{opacity:.5;pointer-events:none}
+    .btn-main{background-color:var(--work-color);color:#fff;padding:12px;border-radius:50%;box-shadow:0 2px 8px -2px var(--work-color);transition:all .5s ease}
+    .btn svg{width:24px;height:24px;fill:var(--fg-light-color)}
+    .btn-main svg{fill:#fff}
+
+    .dark-theme .btn-icon:hover,.dark-theme .settings-toggle:hover{background-color:rgba(255,255,255,.08)}
+
+    .widget-container.compact { padding:16px }
+    .widget-container.compact .timer-display { width:150px; height:150px }
+
+    body.transparent-bg { background:transparent }
+    body.transparent-bg .widget-container { box-shadow:0 6px 24px rgba(0,0,0,.06) }
+
+    /* === État visuel LOCKED pour le panneau === */
+    .settings-panel.locked .settings-header,
+    .settings-panel.locked .setting-row label,
+    .settings-panel.locked .setting-value,
+    .settings-panel.locked .btn-reset {
+      color: var(--fg-light-color);
+      opacity: .6;
+    }
+    .settings-panel.locked .btn-preset[aria-selected="true"] { color: var(--fg-light-color); }
+    .settings-panel.locked .preset-indicator { opacity: .3; }
+    .settings-panel.locked .setting-value { cursor: default; }
+  </style>
 </head>
 <body>
-    <div class="widget-container" id="widget-container">
-        <button class="settings-toggle" id="settings-toggle" aria-label="Open Settings">
-            <svg id="gear-icon" viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.44,0.17-0.48,0.41L9.18,5.03C8.59,5.27,8.06,5.59,7.56,5.97L5.17,5.01C4.95,4.94,4.7,5.01,4.58,5.23L2.66,8.55 c-0.11,0.2-0.06,0.47,0.12,0.61l2.03,1.58C4.74,11.06,4.7,11.38,4.7,11.7c0,0.32,0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.42,2.22 c0.04,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44,0.17,0.48,0.41l0.42-2.22c0.59-0.24,1.12-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0.01,0.59-0.22l1.92-3.32c0.11-0.2,0.06-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
-            <svg id="close-icon" viewBox="0 0 24 24" style="display: none;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-        </button>
-        <div class="settings-panel" id="settings-panel">
-            <div class="settings-section">
-                <div class="preset-tabs" id="preset-tabs"><div class="preset-indicator" id="preset-indicator"></div><button class="btn-preset" data-preset="classic">Classic</button><button class="btn-preset" data-preset="deep">Deep</button><button class="btn-preset" data-preset="sprint">Sprint</button><button class="btn-preset" data-preset="balanced">Flow</button></div>
-            </div>
-            <div class="settings-section">
-                <h2 class="settings-header">Settings</h2>
-                <div class="setting-row"><label>Work</label><div class="control-group"><button class="btn-adjust" data-setting="work" data-change="-1">−</button><span id="work-value" class="setting-value">25</span><button class="btn-adjust" data-setting="work" data-change="1">+</button></div></div>
-                <div class="setting-row"><label>Break</label><div class="control-group"><button class="btn-adjust" data-setting="break" data-change="-1">−</button><span id="break-value" class="setting-value">5</span><button class="btn-adjust" data-setting="break" data-change="1">+</button></div></div>
-                <div class="setting-row"><label>Rounds</label><div class="control-group"><button class="btn-adjust" data-setting="totalRounds" data-change="-1">−</button><span id="rounds-value" class="setting-value">4</span><button class="btn-adjust" data-setting="totalRounds" data-change="1">+</button></div></div>
-            </div>
-            <div class="settings-footer">
-              <button class="btn-reset" id="reset-defaults"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>Reset</button>
-                <div class="footer-controls">
-                    <button class="btn-icon" id="mute-toggle" aria-label="Toggle Sounds"><svg id="volume-on-icon" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"></path></svg><svg id="volume-off-icon" style="display:none;" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"></path></svg></button>
-                    <div class="dark-mode-toggle" aria-label="Toggle Theme"><svg class="sun-icon" viewBox="0 0 24 24"><path d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1S11,19.45,11,20z"/></svg><div class="switch-container"><input type="checkbox" id="dark-mode-checkbox"><label for="dark-mode-checkbox" class="switch-slider"></label></div><svg class="moon-icon" viewBox="0 0 24 24"><path d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.82,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3z"/></svg></div>
-                </div>
-            </div>
+  <div class="widget-container" id="widget-container" tabindex="0" aria-label="Pomodoro Focus Timer">
+    <button class="settings-toggle" id="settings-toggle" aria-label="Open Settings" aria-controls="settings-panel" aria-expanded="false" title="Settings">
+      <svg id="gear-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.44,0.17-0.48,0.41L9.18,5.03C8.59,5.27,8.06,5.59,7.56,5.97L5.17,5.01C4.95,4.94,4.7,5.01,4.58,5.23L2.66,8.55 c-0.11,0.2-0.06,0.47,0.12,0.61l2.03,1.58C4.74,11.06,4.7,11.38,4.7,11.7c0,0.32,0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.42,2.22 c0.04,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.48-0.41l0.42-2.22c0.59-0.24,1.12-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0.01,0.59-0.22l1.92-3.32c0.11-0.2,0.06-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+      <svg id="close-icon" viewBox="0 0 24 24" style="display:none" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+    </button>
+
+    <div class="settings-panel" id="settings-panel" role="dialog" aria-modal="true" aria-labelledby="panel-title" tabindex="-1">
+      <div class="settings-section">
+        <div class="preset-tabs" id="preset-tabs" role="tablist" aria-label="Presets">
+          <div class="preset-indicator" id="preset-indicator" aria-hidden="true"></div>
+          <button class="btn-preset" role="tab" aria-selected="true" tabindex="0" data-preset="classic">Classic</button>
+          <button class="btn-preset" role="tab" aria-selected="false" tabindex="-1" data-preset="deep">Deep</button>
+          <button class="btn-preset" role="tab" aria-selected="false" tabindex="-1" data-preset="sprint">Sprint</button>
+          <button class="btn-preset" role="tab" aria-selected="false" tabindex="-1" data-preset="balanced">Flow</button>
         </div>
-        <h1 class="title" id="widget-title"></h1>
-        <div class="timer-display"><svg viewBox="0 0 120 120"><circle class="progress-bg" cx="60" cy="60" r="54"/><circle class="progress-bar" id="progress-bar" cx="60" cy="60" r="54"/></svg><span class="timer-text" id="timer-text"></span></div>
-        <div class="rounds-indicator" id="rounds-indicator"></div>
-        <div class="controls">
-            <button class="btn" id="reset-btn" aria-label="Reset Timer"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg></button>
-            <button class="btn btn-main" id="start-pause-btn" aria-label="Start Timer"><svg id="play-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><svg id="pause-icon" viewBox="0 0 24 24" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></button>
-            <button class="btn" id="skip-btn" aria-label="Skip Phase"><svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
+      </div>
+
+      <div class="settings-section">
+        <h2 class="settings-header" id="panel-title">Settings</h2>
+        <div class="setting-row">
+          <label id="work-desc">Work</label>
+          <div class="control-group">
+            <button class="btn-adjust" data-setting="work" data-change="-1" aria-label="Decrease work minutes">−</button>
+            <span id="work-value" class="setting-value" aria-live="polite" aria-atomic="true">25</span>
+            <button class="btn-adjust" data-setting="work" data-change="1" aria-label="Increase work minutes">+</button>
+          </div>
         </div>
+        <div class="setting-row">
+          <label id="break-desc">Break</label>
+          <div class="control-group">
+            <button class="btn-adjust" data-setting="break" data-change="-1" aria-label="Decrease break minutes">−</button>
+            <span id="break-value" class="setting-value" aria-live="polite" aria-atomic="true">5</span>
+            <button class="btn-adjust" data-setting="break" data-change="1" aria-label="Increase break minutes">+</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <label id="rounds-desc">Rounds</label>
+          <div class="control-group">
+            <button class="btn-adjust" data-setting="totalRounds" data-change="-1" aria-label="Decrease total rounds">−</button>
+            <span id="rounds-value" class="setting-value" aria-live="polite" aria-atomic="true">4</span>
+            <button class="btn-adjust" data-setting="totalRounds" data-change="1" aria-label="Increase total rounds">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-footer">
+        <div class="footer-controls">
+          <button class="btn-icon" id="mute-toggle" aria-label="Toggle Sounds" title="Toggle Sounds">
+            <svg id="volume-on-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+            <svg id="volume-off-icon" style="display:none" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.5 12c-0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+          </button>
+          <div class="dark-mode-toggle" role="group" aria-labelledby="theme-label" title="Theme">
+            <span id="theme-label" class="sr-only">Theme</span>
+            <svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1S11,19.45,11,20z"/></svg>
+            <div class="switch-container">
+              <input type="checkbox" id="dark-mode-checkbox" />
+              <label for="dark-mode-checkbox" class="switch-slider"></label>
+            </div>
+            <svg class="moon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.82,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3z"/></svg>
+          </div>
+        </div>
+        <div class="footer-controls">
+          <button class="btn-reset" id="reset-defaults" title="Reset to Classic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>Reset</button>
+        </div>
+      </div>
     </div>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    // ===== Persistence helpers =====
-    const STORAGE_KEY = 'focusTimerV1';
-    function persist() {
-        const payload = {
-            config,
-            state: {
-                currentMode: state.currentMode,
-                currentRound: state.currentRound,
-                workSessionsCompleted: state.workSessionsCompleted,
-                isRunning: state.isRunning,
-                isPaused: state.isPaused,
-                phaseEndsAt: state.phaseEndsAt ?? null,
-                pausedRemaining: state.pausedRemaining ?? null,
-                isMuted: state.isMuted,
-            },
-            ui: {
-                dark: elements.container.classList.contains('dark-theme'),
-                activePreset,
-            }
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-        // legacy mute compat
-        localStorage.setItem('timerMuted', state.isMuted);
-    }
-    function loadPersisted(){
-        try {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            return raw ? JSON.parse(raw) : null;
-        } catch { return null; }
-    }
 
-    // ===== Original code (with small adaptations) =====
-    const audio = {
-        ctx: null, unlocked: false,
-        init(){
-            if (this.ctx || this.unlocked) return;
-            try {
-                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const unlock = () => {
-                    if(this.ctx.state === 'suspended') this.ctx.resume();
-                    this.unlocked = true;
-                    window.removeEventListener('click', unlock, true);
-                };
-                window.addEventListener('click', unlock, { once: true });
-            } catch (e) { console.error("Web Audio API is not supported in this browser"); }
-        },
-        tone(freq=880, dur=0.2, type='sine'){
-            if (!this.unlocked || state.isMuted || !this.ctx || this.ctx.state !== 'running') return;
-            const o = this.ctx.createOscillator(), g = this.ctx.createGain();
-            o.type = type; o.frequency.value = freq; o.connect(g); g.connect(this.ctx.destination);
-            const t = this.ctx.currentTime;
-            g.gain.setValueAtTime(0.0001, t);
-            g.gain.exponentialRampToValueAtTime(0.4, t + 0.02);
-            g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-            o.start(t); o.stop(t + dur + 0.03);
-        },
-        chime(kind){ if (kind==='shortBreak') this.tone(987, 0.2, 'triangle'); else if (kind==='longBreak') this.tone(330, 0.5); }
-    };
+    <p class="session-title" id="session-title" aria-live="polite"></p>
+    <h1 class="phase-title" id="phase-title"></h1>
 
-    const params = new URLSearchParams(window.location.search);
-    const root = document.documentElement;
-    const presets = {
-        classic: { name: 'Classic Pomodoro', work: 25, break: 5, longBreak: 15, totalRounds: 4 },
-        deep: { name: 'Deep Work', work: 50, break: 10, longBreak: 30, totalRounds: 2 },
-        sprint: { name: 'Quick Sprint', work: 15, break: 3, longBreak: 10, totalRounds: 6 },
-        balanced: { name: 'Balanced Flow', work: 40, break: 8, longBreak: 20, totalRounds: 3 }
-    };
-    let activePreset = 'classic';
-    const getClampedInt = (name, def, min, max) => { const val = parseInt(params.get(name), 10); return isNaN(val) ? def : Math.max(min, Math.min(val, max)); };
+    <div class="timer-display">
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <circle class="progress-bg" cx="60" cy="60" r="55" />
+        <circle class="progress-bar" id="progress-bar" cx="60" cy="60" r="55" />
+      </svg>
+      <!-- aria-live OFF pour ne pas spammer les lecteurs d'écran chaque seconde -->
+      <span class="timer-text" id="timer-text" role="timer" aria-live="off" aria-atomic="true"></span>
+    </div>
 
-    const elements = {
-        container: document.getElementById('widget-container'), progressBar: document.getElementById('progress-bar'), timerText: document.getElementById('timer-text'), title: document.getElementById('widget-title'), roundsIndicator: document.getElementById('rounds-indicator'), startPauseBtn: document.getElementById('start-pause-btn'), resetBtn: document.getElementById('reset-btn'), skipBtn: document.getElementById('skip-btn'), playIcon: document.getElementById('play-icon'), pauseIcon: document.getElementById('pause-icon'),
+    <div id="a11y-phase" class="sr-only" aria-live="polite"></div>
+
+    <div class="rounds-indicator" id="rounds-indicator"></div>
+
+    <div class="controls">
+      <button class="btn" id="reset-btn" aria-label="Reset Timer" title="Reset (R)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+      </button>
+      <button class="btn btn-main" id="start-pause-btn" aria-label="Start Timer" title="Start / Pause (Space)">
+        <svg id="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        <svg id="pause-icon" viewBox="0 0 24 24" style="display:none" aria-hidden="true"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+      </button>
+      <button class="btn" id="skip-btn" aria-label="Skip Phase" title="Skip (S)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const audio = { ctx:null, unlocked:false,
+        init(){ if (this.ctx || this.unlocked) return; try { this.ctx = new (window.AudioContext||window.webkitAudioContext)(); const unlock=()=>{ if(this.ctx.state==='suspended') this.ctx.resume(); this.unlocked=true; window.removeEventListener('click', unlock, true); }; window.addEventListener('click', unlock, { once:true }); } catch(e){ console.error('Web Audio API is not supported'); } },
+        tone(freq=880, dur=0.2, type='sine'){ if(!this.unlocked || state.isMuted || !this.ctx) return; const o=this.ctx.createOscillator(); const g=this.ctx.createGain(); o.type=type; o.frequency.value=freq; o.connect(g); g.connect(this.ctx.destination); const t=this.ctx.currentTime; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.4,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.start(t); o.stop(t+dur+0.03); },
+        chime(kind){ if(kind==='shortBreak') this.tone(987,.2,'triangle'); else if(kind==='longBreak') this.tone(330,.5); }
+      };
+
+      const params = new URLSearchParams(window.location.search);
+      const root = document.documentElement;
+      const presets = {
+        classic:  { name:'Classic Pomodoro', work:25, break:5,  longBreak:15, totalRounds:4, roundsBeforeLongBreak:4 },
+        deep:     { name:'Deep Work',        work:50, break:10, longBreak:30, totalRounds:2, roundsBeforeLongBreak:2 },
+        sprint:   { name:'Quick Sprint',     work:15, break:3,  longBreak:10, totalRounds:6, roundsBeforeLongBreak:3 },
+        balanced: { name:'Balanced Flow',    work:40, break:8,  longBreak:20, totalRounds:3, roundsBeforeLongBreak:3 }
+      };
+
+      let activePreset = 'classic';
+      const getClampedInt = (name, def, min, max) => { const val = parseInt(params.get(name), 10); return isNaN(val) ? def : Math.max(min, Math.min(val, max)); };
+
+      const el = {
+        container: document.getElementById('widget-container'),
+        progressBar: document.getElementById('progress-bar'),
+        timerText: document.getElementById('timer-text'),
+        sessionTitle: document.getElementById('session-title'),
+        phaseTitle: document.getElementById('phase-title'),
+        roundsIndicator: document.getElementById('rounds-indicator'),
+        startPauseBtn: document.getElementById('start-pause-btn'),
+        resetBtn: document.getElementById('reset-btn'),
+        skipBtn: document.getElementById('skip-btn'),
+        playIcon: document.getElementById('play-icon'),
+        pauseIcon: document.getElementById('pause-icon'),
+        a11yPhase: document.getElementById('a11y-phase'),
         settings: {
-            toggle: document.getElementById('settings-toggle'), panel: document.getElementById('settings-panel'),
-            darkModeCheckbox: document.getElementById('dark-mode-checkbox'), resetDefaultsBtn: document.getElementById('reset-defaults'), adjustBtns: document.querySelectorAll('.btn-adjust'),
-            presetBtns: document.querySelectorAll('.btn-preset'), gearIcon: document.getElementById('gear-icon'), closeIcon: document.getElementById('close-icon'),
-            presetIndicator: document.getElementById('preset-indicator'),
-            valueSpans: { work: document.getElementById('work-value'), break: document.getElementById('break-value'), totalRounds: document.getElementById('rounds-value') },
-            muteToggle: document.getElementById('mute-toggle'), volumeOnIcon: document.getElementById('volume-on-icon'), volumeOffIcon: document.getElementById('volume-off-icon'),
+          toggle: document.getElementById('settings-toggle'), panel: document.getElementById('settings-panel'),
+          darkModeCheckbox: document.getElementById('dark-mode-checkbox'), resetDefaultsBtn: document.getElementById('reset-defaults'), adjustBtns: document.querySelectorAll('.btn-adjust'), presetBtns: document.querySelectorAll('.btn-preset'),
+          gearIcon: document.getElementById('gear-icon'), closeIcon: document.getElementById('close-icon'), presetIndicator: document.getElementById('preset-indicator'),
+          valueSpans: { work: document.getElementById('work-value'), break: document.getElementById('break-value'), totalRounds: document.getElementById('rounds-value') },
+          muteToggle: document.getElementById('mute-toggle'), volumeOnIcon: document.getElementById('volume-on-icon'), volumeOffIcon: document.getElementById('volume-off-icon'),
         }
-    };
+      };
 
-    let config = { ...presets.classic };
-    let state = { timerId: null, isRunning: false, isPaused: false, currentMode: 'work', isMuted: false, phaseEndsAt: null, pausedRemaining: null };
+      const radius = el.progressBar.r.baseVal.value; // 55
+      const circumference = 2 * Math.PI * radius;
+      el.progressBar.style.strokeDasharray = String(circumference);
 
-    const radius = elements.progressBar.r.baseVal.value, circumference = 2 * Math.PI * radius;
-    elements.progressBar.style.strokeDasharray = circumference;
+      const updateThemeColor = (color) => {
+        const c = String(color).trim();
+        root.style.setProperty('--accent-color', c);
+        el.progressBar.style.stroke = c;
+        el.startPauseBtn.style.backgroundColor = c;
+        el.startPauseBtn.style.boxShadow = `0 2px 8px -2px ${c}`;
+      };
 
-    // ----- Deadline-based helpers -----
-    function setPhaseDeadline(secondsFromNow){ state.phaseEndsAt = Date.now() + secondsFromNow * 1000; state.pausedRemaining = null; persist(); }
-    function secondsLeft(){
-        if (state.isRunning && state.phaseEndsAt) return Math.max(0, Math.floor((state.phaseEndsAt - Date.now())/1000));
-        if (!state.isRunning && state.pausedRemaining != null) return Math.max(0, state.pausedRemaining|0);
-        return 0;
-    }
-    function updateDisplayFromDeadline(){
-        const left = secondsLeft();
-        elements.timerText.textContent = `${String(Math.floor(left/60)).padStart(2,'0')}:${String(left%60).padStart(2,'0')}`;
-        const totalTime = (state.currentMode === 'work' ? config.work : (state.currentMode === 'longBreak' ? config.longBreak : config.break)) * 60;
-        const elapsed = Math.max(0, totalTime - left);
-        const ratio = totalTime ? Math.min(1, elapsed/totalTime) : 1;
-        elements.progressBar.style.strokeDashoffset = circumference * (1 - ratio);
-    }
+      function setTitles(session, phase){
+        if (el.sessionTitle) el.sessionTitle.textContent = session || '';
+        if (el.phaseTitle)   el.phaseTitle.textContent   = phase || '';
+      }
+      function announcePhase(txt){ el.a11yPhase.textContent = txt; }
 
-    const applyConfigToTimer = (fullReset = true) => {
+      const buildQuery = () => {
+        const q = new URLSearchParams();
+        q.set('work', String(config.work));
+        q.set('break', String(config.break));
+        q.set('long', String(config.longBreak));
+        q.set('rounds', String(config.totalRounds));
+        q.set('title', config.title || 'Focus Session');
+        if (state.isMuted) q.set('muted','1');
+        if (el.container.classList.contains('dark-theme')) q.set('theme','dark');
+        if (document.body.classList.contains('transparent-bg')) q.set('transparent','1');
+        if (el.container.classList.contains('compact')) q.set('compact','1');
+        return q.toString();
+      };
+      const updateUrl = () => { const qs = buildQuery(); try { history.replaceState(null, '', `${location.pathname}?${qs}`); } catch(_) { } };
+
+      let config = { ...presets.classic };
+      let state = {
+        timerId:null, isRunning:false, isPaused:false,
+        currentMode:'work', isMuted:false,
+        currentRound:1, workSessionsCompleted:0,
+        phaseTotal: presets.classic.work * 60, timeLeft: presets.classic.work * 60,
+        targetEnd: null,
+        isSessionComplete: false
+      };
+
+      const SESSION_KEY = 'timerSessionV1';
+      let lastSessionSave = 0;
+
+      const saveSession = () => {
+        try {
+          const snap = {
+            savedAt: Date.now(),
+            endAt: state.isRunning ? (Date.now() + state.timeLeft * 1000) : null,
+            config: {
+              work: config.work, break: config.break, longBreak: config.longBreak,
+              totalRounds: config.totalRounds, roundsBeforeLongBreak: config.roundsBeforeLongBreak,
+              title: config.title
+            },
+            state: {
+              currentMode: state.currentMode,
+              currentRound: state.currentRound,
+              workSessionsCompleted: state.workSessionsCompleted,
+              isRunning: state.isRunning,
+              isPaused: state.isPaused,
+              phaseTotal: state.phaseTotal,
+              timeLeft: state.timeLeft,
+              targetEnd: state.targetEnd
+            }
+          };
+          localStorage.setItem(SESSION_KEY, JSON.stringify(snap));
+        } catch(_) {}
+      };
+      const clearSession = () => { try { localStorage.removeItem(SESSION_KEY); } catch(_) {} };
+
+      // === Skip availability (pro behavior) ===
+      function updateSkipAvailability(){
+        const isComplete = el.roundsIndicator.textContent.includes('Session Complete');
+        el.skipBtn.disabled = isComplete;
+        el.skipBtn.title = isComplete ? 'Session complete' : 'Skip (S)';
+      }
+
+      const restoreSessionIfRecent = () => {
+        try {
+          const raw = localStorage.getItem(SESSION_KEY);
+          if (!raw) return false;
+          const snap = JSON.parse(raw);
+          if (!snap.savedAt || (Date.now() - snap.savedAt) > 3 * 60 * 1000) return false;
+
+          config = { ...config, ...snap.config };
+          activePreset = null;
+
+          state.currentMode = snap.state.currentMode || 'work';
+          state.currentRound = snap.state.currentRound || 1;
+          state.workSessionsCompleted = snap.state.workSessionsCompleted || 0;
+          state.phaseTotal = snap.state.phaseTotal || (config.work * 60);
+          state.targetEnd = typeof snap.state.targetEnd === 'number' ? snap.state.targetEnd : null;
+
+          let remaining = typeof snap.state.timeLeft === 'number' ? snap.state.timeLeft : config.work * 60;
+          if (snap.endAt) remaining = Math.max(0, Math.round((snap.endAt - Date.now()) / 1000));
+          if (state.targetEnd) remaining = Math.max(0, Math.round((state.targetEnd - Date.now()) / 1000));
+          state.timeLeft = Math.max(0, remaining);
+          state.isRunning = !!snap.state.isRunning;
+          state.isPaused = !!snap.state.isPaused;
+
+          updateSettingsUI();
+          updateRoundsIndicator();
+          const cs = getComputedStyle(document.documentElement);
+          const accent = state.currentMode==='work' ? cs.getPropertyValue('--work-color')
+                        : state.currentMode==='break' ? cs.getPropertyValue('--short-break-color')
+                        : cs.getPropertyValue('--long-break-color');
+          updateThemeColor(accent);
+          setTitles(config.title, state.currentMode==='work' ? 'Work' : (state.currentMode==='break' ? 'Short Break' : 'Long Break'));
+          updateDisplay();
+          updateUI();
+          updateSkipAvailability(); // ajuste Skip selon l’état restauré
+
+          if (state.isRunning && state.timeLeft > 0) {
+            state.targetEnd = Date.now() + state.timeLeft * 1000;
+            state.timerId = setInterval(tick, 250);
+            setSettingsInteractivity(true);
+          } else {
+            setSettingsInteractivity(state.isPaused);
+          }
+          return true;
+        } catch(_) { return false; }
+      };
+
+      // Panel locked (ne touche pas à Skip ici)
+      const setSettingsInteractivity = (disabled) => {
+        const title = disabled
+          ? (state.isRunning ? 'Pause the timer to modify' : 'Resume or reset to modify')
+          : 'Adjust value';
+
+        el.settings.presetBtns.forEach(b => { b.disabled = !!disabled; b.title = title; });
+        el.settings.adjustBtns.forEach(b => { b.disabled = !!disabled; b.title = title; });
+
+        el.settings.panel.classList.toggle('locked', !!disabled);
+        el.settings.panel.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+      };
+
+      const updatePresetHighlighting = () => {
+        const btns = Array.from(el.settings.presetBtns);
+        let activeBtn = null; btns.forEach(btn => { const isMatch = btn.dataset.preset === activePreset; btn.classList.toggle('active', isMatch); if (isMatch) activeBtn = btn; });
+        const indicator = el.settings.presetIndicator; if (activeBtn && activeBtn.offsetWidth > 0) { indicator.style.width = `${activeBtn.offsetWidth}px`; indicator.style.transform = `translateX(${activeBtn.offsetLeft}px)`; indicator.style.opacity = '1'; } else { indicator.style.opacity = '0'; }
+      };
+
+      const setActiveTab = (btn) => {
+        el.settings.presetBtns.forEach(b => {
+          const isActive = b === btn || (activePreset && b.dataset.preset === activePreset);
+          b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+          b.tabIndex = isActive ? 0 : -1;
+        });
+      };
+
+      const updateSettingsUI = () => {
+        el.settings.valueSpans.work.textContent = String(config.work);
+        el.settings.valueSpans.break.textContent = String(config.break);
+        el.settings.valueSpans.totalRounds.textContent = String(config.totalRounds);
+      };
+
+      const saveCustomConfig = () => { const custom = { work:config.work, break:config.break, totalRounds:config.totalRounds }; localStorage.setItem('timerCustomConfig', JSON.stringify(custom)); localStorage.removeItem('timerLastPreset'); updateUrl(); };
+      const savePresetChoice = (presetKey) => { localStorage.setItem('timerLastPreset', presetKey); localStorage.removeItem('timerCustomConfig'); updateUrl(); };
+
+      const applyPreset = (presetKey) => {
+        activePreset = presetKey; config = { ...config, ...presets[presetKey] }; savePresetChoice(presetKey);
+        Object.values(el.settings.valueSpans).forEach(span => { span.classList.add('anim-pop'); span.addEventListener('animationend', () => span.classList.remove('anim-pop'), { once:true }); });
+        setActiveTab(Array.from(el.settings.presetBtns).find(b=>b.dataset.preset===presetKey));
+        if (!state.isRunning) applyConfigToTimer(true); else updateSettingsUI();
+      };
+
+      const updateSetting = (key, change) => {
+        const limits = { work:{min:1,max:120}, break:{min:1,max:60}, totalRounds:{min:1,max:12} };
+        const rule = limits[key]; config[key] = Math.max(rule.min, Math.min((config[key] || 0) + change, rule.max));
+        activePreset = null; updateSettingsUI(); updatePresetHighlighting(); saveCustomConfig(); if (!state.isRunning) applyConfigToTimer(true);
+      };
+
+      const loadAndParseSettings = () => {
+        activePreset = 'classic'; config = { ...presets.classic };
+        const savedCustomConfig = localStorage.getItem('timerCustomConfig'); const savedPreset = localStorage.getItem('timerLastPreset');
+        if (savedCustomConfig) { try { const custom = JSON.parse(savedCustomConfig); config.work = parseInt(custom.work,10) || config.work; config.break = parseInt(custom.break,10) || config.break; config.totalRounds = parseInt(custom.totalRounds,10) || config.totalRounds; activePreset = null; } catch(e){ console.error('Failed to parse custom config'); } }
+        else if (savedPreset && presets[savedPreset]) { activePreset = savedPreset; config = { ...config, ...presets[savedPreset] }; }
+        if (params.has('work') || params.has('break') || params.has('rounds')) { activePreset = null; config.work = getClampedInt('work', config.work, 1, 120); config.break = getClampedInt('break', config.break, 1, 60); config.totalRounds = getClampedInt('rounds', config.totalRounds, 1, 12); }
+        config.longBreak = getClampedInt('long', config.longBreak, 1, 60); config.title = (params.get('title') || 'Focus Session').trim();
+        state.isMuted = params.get('muted') === '1' || (localStorage.getItem('timerMuted') === 'true');
+
+        if (params.get('transparent') === '1') document.body.classList.add('transparent-bg');
+        if (params.get('compact') === '1') el.container.classList.add('compact');
+      };
+
+      const updateDisplay = () => {
+        const timeLeft = Math.max(0, state.timeLeft ?? (config.work * 60));
+        const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+        const s = Math.floor(timeLeft % 60).toString().padStart(2, '0');
+        el.timerText.textContent = `${m}:${s}`;
+        const totalTime = Math.max(1, state.phaseTotal ?? (config.work * 60));
+        const progress = Math.max(0, Math.min(1, (totalTime - timeLeft) / totalTime));
+        el.progressBar.style.strokeDashoffset = String(circumference * (1 - progress));
+        el.timerText.setAttribute('aria-label', `Time left ${m} minutes ${s} seconds`);
+      };
+
+      const updateRoundsIndicator = () => {
+        el.roundsIndicator.innerHTML = '';
+        for (let i=1;i<=config.totalRounds;i++){
+          const dot = document.createElement('span');
+          dot.className = i <= state.workSessionsCompleted ? 'dot completed' : 'dot';
+          el.roundsIndicator.appendChild(dot);
+        }
+        updateSkipAvailability(); // Skip actif/inactif selon état
+      };
+
+      // Reset n’auto-démarre jamais : targetEnd reste null jusqu’à Start
+      const applyConfigToTimer = (fullReset = true) => {
         clearInterval(state.timerId);
         state.isRunning = false; state.isPaused = false; state.currentMode = 'work';
-        if (fullReset) { state.currentRound = 1; state.workSessionsCompleted = 0; elements.title.textContent = config.title; }
-        const workColor = getComputedStyle(root).getPropertyValue('--work-color').trim();
-        root.style.setProperty('--accent-color', workColor);
-        elements.progressBar.style.stroke = workColor; elements.startPauseBtn.style.backgroundColor = workColor; elements.startPauseBtn.style.boxShadow = `0 2px 8px -2px ${workColor}`;
-        // IMPORTANT: when idle (not running), seed pausedRemaining instead of a live deadline,
-        // so the UI shows the full duration (e.g., 25:00) and an empty ring on load.
-        state.phaseEndsAt = null;
-        state.pausedRemaining = (state.currentMode === 'work' ? config.work : (state.currentMode === 'longBreak' ? config.longBreak : config.break)) * 60;
-        updateDisplayFromDeadline(); updateUI(); updateRoundsIndicator();
-        persist();
-    };
-
-    const updatePresetHighlighting = () => {
-        const btns = Array.from(elements.settings.presetBtns);
-        let activeBtn = null;
-        btns.forEach(btn => { const isMatch = btn.dataset.preset === activePreset; btn.classList.toggle('active', isMatch); if (isMatch) activeBtn = btn; });
-        const indicator = elements.settings.presetIndicator;
-        if (activeBtn) { indicator.style.width = `${activeBtn.offsetWidth}px`; indicator.style.transform = `translateX(${activeBtn.offsetLeft}px)`; indicator.style.opacity = '1'; }
-        else { indicator.style.opacity = '0'; }
-    };
-
-    const updateSettingsUI = () => {
-        elements.settings.valueSpans.work.textContent = config.work;
-        elements.settings.valueSpans.break.textContent = config.break;
-        elements.settings.valueSpans.totalRounds.textContent = config.totalRounds;
-    };
-
-    const applyPreset = (presetKey) => {
-        activePreset = presetKey;
-        config = { ...config, ...presets[presetKey] };
-        Object.values(elements.settings.valueSpans).forEach(span => { span.classList.add('anim-pop'); span.addEventListener('animationend', () => span.classList.remove('anim-pop'), { once: true }); });
-        updateSettingsUI(); updatePresetHighlighting();
-        if (!state.isRunning) applyConfigToTimer(true);
-        persist();
-    };
-
-    const updateSetting = (key, change) => {
-        const limits = { work: {min: 1, max: 120}, break: {min: 1, max: 60}, totalRounds: {min: 1, max: 12} };
-        config[key] = Math.max(limits[key].min, Math.min(config[key] + change, limits[key].max));
-        activePreset = null; updateSettingsUI(); updatePresetHighlighting();
-        if (!state.isRunning) applyConfigToTimer(true); else persist();
-    };
-
-    const parseUrlParams = () => {
-        if (params.has('work') || params.has('break') || params.has('rounds')) {
-            activePreset = null;
-            config.work = getClampedInt('work', config.work, 1, 120);
-            config.break = getClampedInt('break', config.break, 1, 60);
-            config.totalRounds = getClampedInt('rounds', config.totalRounds, 1, 12);
+        if (fullReset) {
+          state.currentRound = 1; state.workSessionsCompleted = 0; state.isSessionComplete = false;
+          setTitles(config.title, 'Work');
         }
-        config.longBreak = getClampedInt('long', config.longBreak, 1, 60);
-        config.roundsBeforeLongBreak = getClampedInt('every', config.totalRounds, 1, 12);
-        config.title = params.get('title')?.trim() || 'Focus Session';
-    };
+        state.phaseTotal = config.work * 60;
+        state.timeLeft   = state.phaseTotal;
+        state.targetEnd  = null;
 
-    const updateRoundsIndicator = () => {
-        elements.roundsIndicator.innerHTML = '';
-        for (let i = 1; i <= config.totalRounds; i++) {
-            const dot = document.createElement('span');
-            dot.className = i <= state.workSessionsCompleted ? 'dot completed' : 'dot';
-            elements.roundsIndicator.appendChild(dot);
-        }
-    };
+        const workColor = getComputedStyle(root).getPropertyValue('--work-color');
+        updateThemeColor(workColor);
+        updateDisplay();
+        updateUI();
+        updateRoundsIndicator();
+        updateSettingsUI();
+        updatePresetHighlighting();
+        setSettingsInteractivity(false);
+        updateUrl();
+        clearSession();
+        updateSkipAvailability(); // re-active Skip après reset
+      };
 
-    const switchMode = (mode) => {
+      // switchMode n’auto-démarre pas sauf autoStart=true (enchaînement des phases)
+      const switchMode = (mode, autoStart = false) => {
         clearInterval(state.timerId);
         state.isRunning = false;
-        if (mode === 'break') audio.chime('shortBreak');
-        else if (mode === 'longBreak') audio.chime('longBreak');
-        state.currentMode = mode;
-        const rootStyles = getComputedStyle(root);
-        let accent, newTitle, totalTime;
+        if (mode==='break') audio.chime('shortBreak'); else if (mode==='longBreak') audio.chime('longBreak');
+        state.currentMode = mode; const rootStyles = getComputedStyle(root);
+        let accent, phaseLabel, totalTime;
         switch (mode) {
-            case 'work': totalTime = config.work * 60; newTitle = 'Work'; accent = rootStyles.getPropertyValue('--work-color').trim(); break;
-            case 'break': totalTime = config.break * 60; newTitle = 'Short Break'; accent = rootStyles.getPropertyValue('--short-break-color').trim(); break;
-            case 'longBreak': totalTime = config.longBreak * 60; newTitle = 'Long Break'; accent = rootStyles.getPropertyValue('--long-break-color').trim(); break;
+          case 'work':      totalTime = config.work * 60;      phaseLabel = 'Work';        accent = rootStyles.getPropertyValue('--work-color'); break;
+          case 'break':     totalTime = config.break * 60;     phaseLabel = 'Short Break'; accent = rootStyles.getPropertyValue('--short-break-color'); break;
+          case 'longBreak': totalTime = config.longBreak * 60; phaseLabel = 'Long Break';  accent = rootStyles.getPropertyValue('--long-break-color'); break;
         }
-        root.style.setProperty('--accent-color', accent);
-        elements.title.textContent = newTitle;
-        elements.progressBar.style.stroke = accent; elements.startPauseBtn.style.backgroundColor = accent; elements.startPauseBtn.style.boxShadow = `0 2px 8px -2px ${accent}`;
-        setPhaseDeadline(totalTime);
-        updateDisplayFromDeadline(); updateUI();
-        startTimer();
-    };
+        updateThemeColor(accent);
+        setTitles(config.title, phaseLabel);
+        state.phaseTotal = totalTime;
+        state.timeLeft   = totalTime;
+        state.targetEnd  = null;
+        updateDisplay(); updateUI();
+        announcePhase(`${phaseLabel} set for ${Math.round(totalTime/60)} minutes`);
+        saveSession();
+        if (autoStart) startTimer();
+      };
 
-    const triggerNextPhase = () => {
+      const triggerNextPhase = () => {
         if (state.currentMode === 'work') {
-            state.workSessionsCompleted++; updateRoundsIndicator();
-            const isLongBreakTime = state.workSessionsCompleted > 0 && state.workSessionsCompleted % config.roundsBeforeLongBreak === 0;
-            switchMode(isLongBreakTime ? 'longBreak' : 'break');
+          state.workSessionsCompleted++; updateRoundsIndicator();
+          const isLong = state.workSessionsCompleted > 0 && state.workSessionsCompleted % config.roundsBeforeLongBreak === 0;
+          switchMode(isLong ? 'longBreak' : 'break', true);
         } else {
-            if (state.currentRound < config.totalRounds) { state.currentRound++; switchMode('work'); }
-            else { applyConfigToTimer(true); elements.roundsIndicator.innerHTML = "Session Complete"; }
+          if (state.workSessionsCompleted < config.totalRounds) {
+            switchMode('work', true);
+          } else {
+            state.isSessionComplete = true;
+            applyConfigToTimer(true);
+            el.roundsIndicator.textContent = 'Session Complete';
+            announcePhase('Session complete');
+            updateSkipAvailability(); // Skip off quand fini
+          }
         }
-        persist();
-    };
+      };
 
-    const tick = () => { if (secondsLeft() > 0) { updateDisplayFromDeadline(); } else { triggerNextPhase(); } };
+      const tick = () => {
+        if (!state.targetEnd) state.targetEnd = Date.now() + (state.timeLeft * 1000);
+        state.timeLeft = Math.max(0, Math.round((state.targetEnd - Date.now())/1000));
+        updateDisplay();
 
-    function startTimer(){
+        const now = Date.now();
+        if (now - lastSessionSave > 5000) { lastSessionSave = now; saveSession(); }
+
+        if (state.timeLeft <= 0) {
+          saveSession();
+          triggerNextPhase();
+        }
+      };
+
+      const startTimer = () => {
         if (state.isRunning) return;
-        // Use pausedRemaining when available, otherwise compute total for the current phase
-        const total = (state.currentMode === 'work' ? config.work : (state.currentMode === 'longBreak' ? config.longBreak : config.break)) * 60;
-        const seed = (state.pausedRemaining != null ? state.pausedRemaining : total);
-        setPhaseDeadline(seed);
-        state.isRunning = true; state.isPaused = false;
-        state.timerId = setInterval(tick, 1000);
-        updateUI(); persist();
-    }
-    function pauseTimer(){ if (!state.isRunning) return; state.isRunning = false; state.isPaused = true; clearInterval(state.timerId); state.pausedRemaining = secondsLeft(); updateUI(); persist(); }
+        state.isRunning = true;
+        state.isPaused = false;
+        state.isSessionComplete = false;
 
-    const updateUI = () => {
-        elements.playIcon.style.display = state.isRunning ? 'none' : 'block';
-        elements.pauseIcon.style.display = state.isRunning ? 'block' : 'none';
-        elements.startPauseBtn.setAttribute('aria-label', state.isRunning ? 'Pause Timer' : 'Start Timer');
-    };
+        state.targetEnd = Date.now() + (state.timeLeft * 1000);
 
-    const updateMuteButtonUI = () => {
-        elements.settings.volumeOnIcon.style.display = state.isMuted ? 'none' : 'block';
-        elements.settings.volumeOffIcon.style.display = state.isMuted ? 'block' : 'none';
-        elements.settings.muteToggle.setAttribute('aria-label', state.isMuted ? 'Unmute Sounds' : 'Mute Sounds');
-    };
+        if (el.roundsIndicator.textContent.includes('Session Complete') || state.isSessionComplete) {
+          applyConfigToTimer(true);
+          state.targetEnd = Date.now() + (state.timeLeft * 1000);
+        }
 
-    // Settings events
-    elements.settings.toggle.addEventListener('click', () => {
-        const isVisible = elements.settings.panel.classList.toggle('visible');
-        elements.settings.gearIcon.style.display = isVisible ? 'none' : 'block';
-        elements.settings.closeIcon.style.display = isVisible ? 'block' : 'none';
-        elements.settings.toggle.setAttribute('aria-label', isVisible ? 'Close Settings' : 'Open Settings');
-        if(isVisible) updatePresetHighlighting();
+        state.timerId = setInterval(tick, 250);
+        setSettingsInteractivity(true);
+        updateUI();
+        updateSkipAvailability();
+        saveSession();
+      };
+
+      const pauseTimer = () => {
+        if (!state.isRunning) return;
+        state.isRunning = false;
+        state.isPaused = true;
+
+        if (state.targetEnd) {
+          state.timeLeft = Math.max(0, Math.round((state.targetEnd - Date.now())/1000));
+        }
+
+        clearInterval(state.timerId);
+        state.timerId = null;
+        state.targetEnd = null;
+
+        setSettingsInteractivity(true);
+        updateUI();
+        updateSkipAvailability();
+        saveSession();
+      };
+
+      const updateUI = () => {
+        el.playIcon.style.display = state.isRunning ? 'none' : 'block';
+        el.pauseIcon.style.display = state.isRunning ? 'block' : 'none';
+        el.startPauseBtn.setAttribute('aria-label', state.isRunning ? 'Pause Timer' : 'Start Timer');
+      };
+      const updateMuteButtonUI = () => {
+        el.settings.volumeOnIcon.style.display = state.isMuted ? 'none' : 'block';
+        el.settings.volumeOffIcon.style.display = state.isMuted ? 'block' : 'none';
+        el.settings.muteToggle.setAttribute('aria-label', state.isMuted ? 'Unmute Sounds' : 'Mute Sounds');
+      };
+
+      const trapSelectors = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+      let lastFocus = null;
+
+      // 🔒 inert only (pas de aria-hidden sur le fond)
+      function setBackdropInert(isOpen) {
+        const siblings = el.container.querySelectorAll(':scope > *:not(#settings-panel):not(#settings-toggle)');
+        siblings.forEach(n => {
+          try { n.inert = isOpen; } catch(_) {}
+        });
+      }
+
+      function openSettings(){
+        lastFocus = document.activeElement;
+        setBackdropInert(true);
+        el.settings.panel.classList.add('visible');
+        el.settings.gearIcon.style.display = 'none';
+        el.settings.closeIcon.style.display = 'block';
+        el.settings.toggle.setAttribute('aria-label', 'Close Settings');
+        el.settings.toggle.setAttribute('aria-expanded', 'true');
+        updatePresetHighlighting();
+        const first = el.settings.panel.querySelector(trapSelectors);
+        (first || el.settings.panel).focus();
+      }
+
+      function closeSettings(){
+        el.settings.panel.classList.remove('visible');
+        el.settings.gearIcon.style.display = 'block';
+        el.settings.closeIcon.style.display = 'none';
+        el.settings.toggle.setAttribute('aria-label', 'Open Settings');
+        el.settings.toggle.setAttribute('aria-expanded', 'false');
+        setBackdropInert(false);
+        (lastFocus || el.settings.toggle).focus();
+      }
+
+      el.settings.toggle.addEventListener('click', () => {
+        const isVisible = el.settings.panel.classList.contains('visible');
+        if (isVisible) closeSettings(); else openSettings();
+      });
+
+      // Trap tab / Escape / arrows
+      el.settings.panel.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { e.preventDefault(); closeSettings(); return; }
+        if (e.key === 'Tab') {
+          const focusable = Array.from(el.settings.panel.querySelectorAll(trapSelectors)).filter(node => !node.hasAttribute('disabled') && node.getClientRects().length);
+          if (!focusable.length) return;
+          const first = focusable[0], last = focusable[focusable.length - 1];
+          if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+          else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
+        const isOnTab = document.activeElement && document.activeElement.getAttribute('role') === 'tab';
+        if (isOnTab && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
+          const list = Array.from(el.settings.presetBtns);
+          let i = list.indexOf(document.activeElement);
+          i = e.key === 'ArrowRight' ? (i + 1) % list.length : (i - 1 + list.length) % list.length;
+          list[i].focus();
+        }
+      });
+
+      el.settings.adjustBtns.forEach(btn => btn.addEventListener('click', (e) => { updateSetting(e.currentTarget.dataset.setting, parseInt(e.currentTarget.dataset.change, 10)); }));
+      el.settings.presetBtns.forEach(btn => { btn.addEventListener('click', () => { setActiveTab(btn); applyPreset(btn.dataset.preset); }); });
+
+      el.settings.darkModeCheckbox.addEventListener('change', (e) => { el.container.classList.toggle('dark-theme', e.target.checked); localStorage.setItem('timerDarkMode', e.target.checked); updateUrl(); });
+      el.settings.resetDefaultsBtn.addEventListener('click', () => {
+        localStorage.removeItem('timerCustomConfig'); localStorage.removeItem('timerLastPreset'); applyPreset('classic');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; el.settings.darkModeCheckbox.checked = prefersDark; el.container.classList.toggle('dark-theme', prefersDark); localStorage.setItem('timerDarkMode', String(prefersDark));
+        state.isMuted = false; localStorage.setItem('timerMuted', 'false'); updateMuteButtonUI(); updateUrl(); clearSession();
+      });
+      el.settings.muteToggle.addEventListener('click', () => { state.isMuted = !state.isMuted; localStorage.setItem('timerMuted', state.isMuted); updateMuteButtonUI(); updateUrl(); });
+
+      el.startPauseBtn.addEventListener('click', () => { audio.init(); (state.isPaused || !state.isRunning) ? startTimer() : pauseTimer(); });
+      el.resetBtn.addEventListener('click', () => { applyConfigToTimer(true); saveSession(); });
+      el.skipBtn.addEventListener('click', () => triggerNextPhase());
+
+      el.container.addEventListener('keydown', (e) => {
+        if (e.key === ' ') { e.preventDefault(); (state.isPaused || !state.isRunning) ? startTimer() : pauseTimer(); }
+        else if (e.key.toLowerCase() === 'r') { applyConfigToTimer(true); }
+        else if (e.key.toLowerCase() === 's') { triggerNextPhase(); }
+        else if (e.key.toLowerCase() === 't') { const isVisible = el.settings.panel.classList.contains('visible'); if (isVisible) closeSettings(); else openSettings(); }
+        else if (e.key.toLowerCase() === 'd') { el.settings.darkModeCheckbox.checked = !el.settings.darkModeCheckbox.checked; el.settings.darkModeCheckbox.dispatchEvent(new Event('change')); }
+      });
+
+      // Click hors du panel → pointerdown (plus robuste)
+      document.addEventListener('pointerdown', (e) => {
+        if (!el.settings.panel.classList.contains('visible')) return;
+        const withinPanel = el.settings.panel.contains(e.target);
+        const isToggle = e.target === el.settings.toggle || el.settings.toggle.contains(e.target);
+        if (!withinPanel && !isToggle) closeSettings();
+      });
+
+      window.addEventListener('resize', () => { if (el.settings.panel.classList.contains('visible')) updatePresetHighlighting(); });
+
+      const savedDarkModeStr = localStorage.getItem('timerDarkMode');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const savedDarkMode = savedDarkModeStr === null ? prefersDark : (savedDarkModeStr === 'true');
+      el.settings.darkModeCheckbox.checked = savedDarkMode; el.container.classList.toggle('dark-theme', savedDarkMode);
+
+      loadAndParseSettings();
+      updateMuteButtonUI();
+      updateSettingsUI();
+      setActiveTab(Array.from(el.settings.presetBtns).find(b=>b.dataset.preset===activePreset));
+      updatePresetHighlighting();
+
+      if (!restoreSessionIfRecent()) { applyConfigToTimer(true); }
+      updateSkipAvailability(); // état initial sécurisé
+
+      window.addEventListener('beforeunload', saveSession);
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) saveSession();
+        else updateDisplay();
+      });
     });
-    elements.settings.adjustBtns.forEach(btn => btn.addEventListener('click', (e) => { updateSetting(e.currentTarget.dataset.setting, parseInt(e.currentTarget.dataset.change, 10)); }));
-    elements.settings.presetBtns.forEach(btn => btn.addEventListener('click', (e) => applyPreset(e.currentTarget.dataset.preset)));
-    elements.settings.darkModeCheckbox.addEventListener('change', (e) => { elements.container.classList.toggle('dark-theme', e.target.checked); persist(); });
-    elements.settings.resetDefaultsBtn.addEventListener('click', () => { applyPreset('classic'); elements.settings.darkModeCheckbox.checked = true; elements.settings.darkModeCheckbox.dispatchEvent(new Event('change')); persist(); });
-    elements.settings.muteToggle.addEventListener('click', () => { state.isMuted = !state.isMuted; updateMuteButtonUI(); persist(); });
-
-    elements.startPauseBtn.addEventListener('click', () => { audio.init(); elements.settings.panel.classList.remove('visible'); state.isPaused ? startTimer() : (state.isRunning ? pauseTimer() : startTimer()); });
-    elements.resetBtn.addEventListener('click', () => { applyConfigToTimer(true); });
-    elements.skipBtn.addEventListener('click', () => { triggerNextPhase(); });
-
-    // Hydrate from storage
-    function hydrateFromStorage(){
-        const saved = loadPersisted();
-        if (!saved) return false;
-        try {
-            // config + UI
-            config = { ...config, ...saved.config };
-            activePreset = saved.ui?.activePreset ?? activePreset;
-            state.isMuted = saved.state?.isMuted ?? (localStorage.getItem('timerMuted') === 'true');
-            const wantDark = !!saved.ui?.dark; elements.container.classList.toggle('dark-theme', wantDark);
-            if (elements.settings?.darkModeCheckbox) elements.settings.darkModeCheckbox.checked = wantDark;
-
-            // state
-            if (saved.state?.currentMode) state.currentMode = saved.state.currentMode;
-            state.currentRound = saved.state?.currentRound ?? 1;
-            state.workSessionsCompleted = saved.state?.workSessionsCompleted ?? 0;
-            state.phaseEndsAt = saved.state?.phaseEndsAt ?? null;
-            state.pausedRemaining = saved.state?.pausedRemaining ?? null;
-            state.isPaused = !!saved.state?.isPaused;
-            state.isRunning = !!saved.state?.isRunning;
-
-            updateSettingsUI(); updatePresetHighlighting(); updateRoundsIndicator();
-
-            // Ensure a visible, correct title
-            if (state.isRunning) {
-                // reflect current mode title
-                const modeTitle = state.currentMode === 'work' ? 'Work' : (state.currentMode === 'longBreak' ? 'Long Break' : 'Short Break');
-                elements.title.textContent = modeTitle;
-            } else {
-                // idle → generic title (like original)
-                elements.title.textContent = config.title || 'Focus Session';
-            }
-
-            // If running but deadline has passed, advance phases until valid (guarded)
-            let guard = 0;
-            if (state.isRunning){
-                while (secondsLeft() === 0 && guard++ < 50){ triggerNextPhase(); }
-                startTimer(); // auto relaunch
-            } else {
-                // not running → show remaining based on pausedRemaining or seed default
-                if (state.pausedRemaining == null && !state.phaseEndsAt){
-                    state.pausedRemaining = (state.currentMode === 'work' ? config.work : (state.currentMode === 'longBreak' ? config.longBreak : config.break)) * 60;
-                }
-                updateDisplayFromDeadline(); updateUI();
-            }
-            // Make sure the time is visible (some browsers briefly collapse text after restore)
-            elements.timerText.style.opacity = '1';
-            return true;
-        } catch { return false; }
-    }
-
-    // --- Initial Setup ---
-    const paramsMute = localStorage.getItem('timerMuted');
-    if (paramsMute !== null) state.isMuted = (paramsMute === 'true');
-    updateMuteButtonUI();
-    parseUrlParams();
-
-    const hydrated = hydrateFromStorage();
-    if (!hydrated){
-        updateSettingsUI(); updatePresetHighlighting(); applyConfigToTimer(true); updateDisplayFromDeadline(); updateUI();
-    }
-
-    window.addEventListener('beforeunload', persist);
-});
-</script>
+  </script>
 </body>
 </html>
