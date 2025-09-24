@@ -21,13 +21,12 @@
       --shadow:0 8px 32px rgba(0,0,0,0.08);
     }
     .dark-theme{
-  --panel-color: rgba(32, 32, 32, 0.8); /* Semi-transparent */
-  --fg-color:#ffffff;
-  --fg-light-color:#bdbdc2;
-  --ring-color: rgba(58, 58, 60, 0.5); /* Plus transparent */
-  --border-color: rgba(255,255,255,0.1);
-  --shadow: 0 8px 32px rgba(0,0,0,0.2); /* Ombre plus prononcée */
-}
+      --panel-color: #2c2c2e;
+      --fg-color:#ffffff;
+      --fg-light-color:#bdbdc2;
+      --ring-color:#3a3a3c;
+      --border-color:rgba(255,255,255,0.1);
+    }
 
     .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,1px,1px);white-space:nowrap;border:0}
     html,body{background: transparent !important;height:100%;overflow:hidden}
@@ -246,35 +245,6 @@
   </div>
 
   <script>
-    // Détection automatique du thème Notion
-function detectNotionTheme() {
-  // Si intégré dans une iframe (comme dans Notion)
-  if (window.self !== window.top) {
-    try {
-      // Essaye de détecter le thème du parent
-      const parentHtml = window.parent.document.documentElement;
-      if (parentHtml.classList.contains('notion-dark-theme') || 
-          parentHtml.getAttribute('data-theme') === 'dark') {
-        document.documentElement.classList.add('dark-theme');
-        document.body.classList.add('dark-theme');
-        el.container.classList.add('dark-theme');
-      }
-    } catch (e) {
-      // Fallback si la détection échoue (pour la cross-origin policy)
-      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        document.documentElement.classList.add('dark-theme');
-        document.body.classList.add('dark-theme');
-        el.container.classList.add('dark-theme');
-      }
-    }
-  }
-}
-
-// Appelez cette fonction au chargement
-document.addEventListener('DOMContentLoaded', () => {
-  detectNotionTheme();
-  // ... le reste de votre code existant ...
-});
     document.addEventListener('DOMContentLoaded', () => {
       const audio = { ctx:null, unlocked:false,
         init(){ if (this.ctx || this.unlocked) return; try { this.ctx = new (window.AudioContext||window.webkitAudioContext)(); const unlock=()=>{ if(this.ctx.state==='suspended') this.ctx.resume(); this.unlocked=true; window.removeEventListener('click', unlock, true); }; window.addEventListener('click', unlock, { once:true }); } catch(e){ console.error('Web Audio API is not supported'); } },
