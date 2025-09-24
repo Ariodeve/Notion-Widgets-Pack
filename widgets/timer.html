@@ -45,16 +45,8 @@
     .widget-container{
       position:relative;width:100%;max-width:380px;background-color:var(--panel-color);
       border-radius:var(--radius);padding:24px;text-align:center;box-sizing:border-box;
-      box-shadow:var(--shadow);overflow:hidden;transition:background-color .3s ease,color .3s ease;color:var(--fg-color);outline:none;
+      box-shadow:var(--shadow);overflow:hidden;transition:background-color .3s ease,color .3s ease;color:var(--fg-color);outline:none;background-color: transparent;
     }
-    .dark-theme{
-  --panel-color: transparent;
-  --shadow: none;
-}
-
-.widget-container{
-  background-color: var(--panel-color);
-}
     .widget-container:focus-visible{box-shadow:0 0 0 3px var(--ring-color),var(--shadow)}
 
     .settings-toggle{position:absolute;top:16px;right:16px;z-index:30;background:none;border:none;cursor:pointer;padding:4px;border-radius:50%;display:flex;align-items:center;justify-content:center;width:36px;height:36px}
@@ -152,6 +144,13 @@
     .settings-panel.locked .btn-preset[aria-selected="true"] { color: var(--fg-light-color); }
     .settings-panel.locked .preset-indicator { opacity: .3; }
     .settings-panel.locked .setting-value { cursor: default; }
+    @media (prefers-color-scheme: dark) {
+  body, .widget-container {
+    /* Ces lignes s'activeront uniquement quand Notion est en mode sombre */
+    --fg-color: #e6e6e6 !important;       /* Texte principal (chrono) en blanc cassé */
+    --fg-light-color: #9b9a97 !important; /* Texte secondaire et icônes en gris clair */
+  }
+}
   </style>
 </head>
 <body>
