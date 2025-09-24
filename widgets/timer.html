@@ -245,6 +245,35 @@
   </div>
 
   <script>
+    // Détection automatique du thème Notion
+function detectNotionTheme() {
+  // Si intégré dans une iframe (comme dans Notion)
+  if (window.self !== window.top) {
+    try {
+      // Essaye de détecter le thème du parent
+      const parentHtml = window.parent.document.documentElement;
+      if (parentHtml.classList.contains('notion-dark-theme') || 
+          parentHtml.getAttribute('data-theme') === 'dark') {
+        document.documentElement.classList.add('dark-theme');
+        document.body.classList.add('dark-theme');
+        el.container.classList.add('dark-theme');
+      }
+    } catch (e) {
+      // Fallback si la détection échoue (pour la cross-origin policy)
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.classList.add('dark-theme');
+        document.body.classList.add('dark-theme');
+        el.container.classList.add('dark-theme');
+      }
+    }
+  }
+}
+
+// Appelez cette fonction au chargement
+document.addEventListener('DOMContentLoaded', () => {
+  detectNotionTheme();
+  // ... le reste de votre code existant ...
+});
     document.addEventListener('DOMContentLoaded', () => {
       const audio = { ctx:null, unlocked:false,
         init(){ if (this.ctx || this.unlocked) return; try { this.ctx = new (window.AudioContext||window.webkitAudioContext)(); const unlock=()=>{ if(this.ctx.state==='suspended') this.ctx.resume(); this.unlocked=true; window.removeEventListener('click', unlock, true); }; window.addEventListener('click', unlock, { once:true }); } catch(e){ console.error('Web Audio API is not supported'); } },
